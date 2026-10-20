@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoryMode = strictly
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "AFEC"
+include ':app'
