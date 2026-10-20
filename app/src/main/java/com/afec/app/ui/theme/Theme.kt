@@ -4,7 +4,11 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import android.os.Build
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 
 private val LightColors = lightColorScheme(
     primary = Primary600, onPrimary = Slate50,
@@ -37,8 +41,16 @@ fun AfecTheme(mode: ThemeMode = ThemeMode.SYSTEM, content: @Composable () -> Uni
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
+    // FR-14: Material You dynamic color on Android 12+ (API 31), PRD tokens otherwise.
+    val context = LocalContext.current
+    val colors = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dark -> dynamicDarkColorScheme(context)
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
+        dark -> DarkColors
+        else -> LightColors
+    }
     MaterialTheme(
-        colorScheme = if (dark) DarkColors else LightColors,
+        colorScheme = colors,
         typography = AfecTypography,
         shapes = AfecShapes,
         content = content

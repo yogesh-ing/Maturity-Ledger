@@ -52,6 +52,7 @@ fun SettingsScreen(
     onThemeMode: (ThemeMode) -> Unit,
     onRescanSms: () -> Unit,
     onExportCsv: () -> Unit,
+    onExportPdf: () -> Unit,
     onResetAllData: () -> Unit
 ) {
     val context = LocalContext.current
@@ -200,6 +201,7 @@ fun SettingsScreen(
                     )
                 }
                 OutlinedButton(onExportCsv) { Text("Export to CSV") }
+                OutlinedButton(onExportPdf) { Text("Export to PDF") }
                 Text(
                     "Fully offline: AFEC requests no internet permission and stores everything in a local Room database. Raw SMS are auto-purged after 30 days.",
                     style = MaterialTheme.typography.bodyMedium,

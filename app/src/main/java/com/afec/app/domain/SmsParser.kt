@@ -93,7 +93,8 @@ object SmsParser {
         body: String,
         receivedDate: LocalDate = LocalDate.now(),
         zone: ZoneId = ZoneId.systemDefault(),
-        knownSenderIds: Set<String> = KNOWN_SENDERS.keys
+        knownSenderIds: Set<String> = KNOWN_SENDERS.keys,
+        senderWeight: Int = 30
     ): ParseOutcome {
         val reasons = mutableListOf<String>()
         var score = 0
@@ -102,7 +103,7 @@ object SmsParser {
 
         val senderKey = knownSenderIds.firstOrNull { upperSender.contains(it) }
         val senderKnown = senderKey != null
-        if (senderKnown) { score += 30; reasons += "known sender" }
+        if (senderKnown) { score += senderWeight; reasons += "known sender" }
 
         val hasKeyword = KEYWORDS.any { body.contains(it, ignoreCase = true) }
         if (hasKeyword) { score += 25; reasons += "financial keyword" }

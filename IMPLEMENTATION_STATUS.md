@@ -18,8 +18,8 @@ The parser's regex/scoring logic was additionally validated outside Android agai
 - [x] MVVM + Repository, ViewModel exposes `StateFlow` (manual DI instead of Hilt to keep the build dependency-light)
 - [x] Room DB with the 4 PRD §07 entities: `TrackedInstrument`, `SmsMessage`, `NotificationPreference`, `ParserPattern` (plus `deletedAtEpoch` for FR-08)
 - [x] Compose theme from PRD §06 tokens: Indigo primary, Teal accent, urgency Red/Amber/Green, Slate neutrals, dark surfaces, typography scale, radius/elevation
-- [ ] SQLCipher DB encryption (§11): **not yet wired** — `AFECDatabase.kt` marks the exact `.openHelperFactory(...)` seam. No `INTERNET` permission is declared, so nothing can leave the device.
-- [ ] CI pipeline: not set up
+- [x] SQLCipher DB encryption (§11): wired via `SupportOpenHelperFactory` with a random passphrase wrapped by an Android Keystore AES-256-GCM key (`DatabaseKeyProvider.kt`); encrypted DB is `afec-secure-database`. No network permission is declared, so nothing can leave the device. *(Code-complete; compile-verification pending first CI build.)*
+- [~] CI pipeline: workflow ready at `ci/build-apk.yml` (+ `ci/README.md` steps). It must be copied to `.github/workflows/build-apk.yml` via the GitHub web UI once — Arena's GitHub token is denied `workflows` permission (git push + API both rejected).
 
 ### Phase 1 — Core MVP (FR-01, 02, 03, 06, 09)
 - [x] Onboarding: 3-slide carousel + plain-language permission rationale + permission dialog; denied → manual-only mode with dashboard banner (§04)
@@ -43,10 +43,24 @@ The parser's regex/scoring logic was additionally validated outside Android agai
 ### Phase 3 — Delight (partial)
 - [x] Home-screen widget: nearest upcoming expiry (FR-13, classic AppWidget — not Glance)
 - [x] Dashboard filter by type + sort by date/amount/urgency (FR-11)
-- [x] CSV export via share sheet (FR-12 — CSV only, no PDF)
-- [x] Light/Dark/System themes (FR-14; not Material You dynamic color)
+- [x] CSV **and PDF** export via share sheet (FR-12) — `CsvExporter` / `PdfExporter`, both covered by tests/preview code
+- [x] Light/Dark/System themes + Material You dynamic color on API 31+ (FR-14)
 - [ ] Play Store build (PRD §14 defers this to Phase 3, sideload first)
 - [ ] Device QA matrix + closed beta (§13): needs physical devices / users
 
 ## How to try the parser without a phone
 Run the unit tests, or add any of the 4 PRD Appendix SMS bodies via **Settings → Rescan** results / Verification Queue on a device with SMS permission. On an emulator, use **Extended Controls → Phone → SMS** to inject a sample message.
+
+## Second-round completion (this update)
+- [x] Grouped summary notification for same-day milestone alerts (§10) + auto-add confirmation notification (§04 happy path; background-safe instead of a Toast)
+- [x] Correction → heuristic feedback (§04): approving an edited queue item adjusts that sender's `ParserPattern` weight (-5 edited / +2 clean, clamped), and ingestion actually scores with DB weights
+- [x] Dashboard filter by institution in addition to type (FR-11 complete: institution + type + sort date/amount/urgency)
+- [x] PDF export (FR-12 complete: CSV + PDF)
+- [x] Dynamic color (FR-14), SQLCipher encryption (§11)
+
+## Still partial / not done (honest list)
+- Home-screen widget is a classic `AppWidgetProvider`, not Jetpack Glance as named in Phase 3 (FR-13 behaviour is met)
+- Optional biometric/PIN app lock (§11, marked optional in PRD) — not implemented
+- Unit-test coverage ≥80% (§09/§13) — parser/date/CSV tests exist; DAO/alarm instrumentation tests and the 50-template corpus are not complete
+- Device QA matrix (Pixel/Samsung/Xiaomi/OnePlus, API 26–34), closed beta, Play Store build (§13/§14) — require devices/users and a `READ_SMS`-policy decision
+- **The app has still never been compiled**: no JDK/Android SDK exists in this sandbox and Google/Maven hosts are blocked. First build = the CI workflow above (or Android Studio). Compile errors, if any, get fixed on that first run — only then can an APK be exported and committed under `apk/`.

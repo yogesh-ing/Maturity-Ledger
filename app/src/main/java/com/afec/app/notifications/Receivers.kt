@@ -21,6 +21,7 @@ class AlertActionReceiver : BroadcastReceiver() {
                 when (intent.action) {
                     NotificationHelper.ACTION_FIRE -> {
                         NotificationHelper.showMilestone(context, item, offset)
+                        NotificationHelper.showGroupSummary(context, urgent = offset <= 3)
                         repo.markMilestoneSent(item, offset)
                     }
                     NotificationHelper.ACTION_MARK_DONE -> {

@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.afec.app.data.TrackedInstrument
 import com.afec.app.export.CsvExporter
+import com.afec.app.export.PdfExporter
 import com.afec.app.ui.theme.AfecTheme
 
 private enum class Tab { DASHBOARD, QUEUE, SETTINGS }
@@ -176,6 +177,7 @@ fun AfecApp(
                         onThemeMode = { viewModel.setThemeMode(it) },
                         onRescanSms = { viewModel.rescanSms() },
                         onExportCsv = { CsvExporter.shareCsv(context, instruments) },
+                        onExportPdf = { PdfExporter.sharePdf(context, instruments) },
                         onResetAllData = { viewModel.resetAllData() }
                     )
                 }

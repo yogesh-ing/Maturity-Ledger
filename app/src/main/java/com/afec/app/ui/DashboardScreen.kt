@@ -59,9 +59,13 @@ fun DashboardScreen(
     onDeleteForever: (TrackedInstrument) -> Unit
 ) {
     var typeFilter by remember { mutableStateOf<InstrumentType?>(null) }
+    var institutionFilter by remember { mutableStateOf<String?>(null) }
     var sort by remember { mutableStateOf(SortMode.DATE) }
 
-    val visible = instruments.filter { typeFilter == null || it.instrumentType == typeFilter }
+    val visible = instruments.filter {
+        (typeFilter == null || it.instrumentType == typeFilter) &&
+            (institutionFilter == null || it.institutionName == institutionFilter)
+    }
     val active = visible.filter {
         it.status == InstrumentStatus.ACTIVE || it.status == InstrumentStatus.OVERDUE
     }.let { list ->
@@ -141,6 +145,18 @@ fun DashboardScreen(
                     }
                 }
                 Spacer(Modifier.height(4.dp))
+                val institutions = instruments.map { it.institutionName }.distinct().sorted()
+                if (institutions.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterChip(institutionFilter == null, { institutionFilter = null }, { Text("All banks") })
+                        }
+                        items(institutions) { bank ->
+                            FilterChip(institutionFilter == bank, { institutionFilter = bank }, { Text(bank) })
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(SortMode.values()) { mode ->
                         FilterChip(sort == mode, { sort = mode }, { Text("Sort: ${mode.name}") })

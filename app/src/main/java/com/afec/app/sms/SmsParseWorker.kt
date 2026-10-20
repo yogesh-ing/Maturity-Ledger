@@ -17,10 +17,12 @@ class SmsParseWorker(appContext: Context, params: WorkerParameters) :
         val repo = AfecRepository(applicationContext)
         repo.seedPatternsIfEmpty()
         return try {
-            when (repo.ingestSms(sender, body, receivedAt)) {
+            when (val result = repo.ingestSms(sender, body, receivedAt)) {
                 is AfecRepository.IngestResult.Queued ->
                     NotificationHelper.showQueued(applicationContext, 1)
-                else -> Unit // auto-added confirmation is in-app; silent log stays silent (§07)
+                is AfecRepository.IngestResult.AutoAdded ->
+                    NotificationHelper.showAutoAdded(applicationContext, result.item)
+                else -> Unit // silent log stays silent (S07)
             }
             Result.success()
         } catch (e: Exception) {

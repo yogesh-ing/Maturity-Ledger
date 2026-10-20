@@ -44,7 +44,15 @@ class AfecRepository(context: Context) {
 
     /** Entry point for every parsed SMS (live receiver, historical scan, tests). */
     suspend fun ingestSms(sender: String, body: String, receivedAtEpoch: Long): IngestResult {
-        val outcome = SmsParser.parse(sender, body, LocalDate.now())
+        // Pluggable ParserPattern weights (PRD S07/S14): seeded + correction-tuned per sender.
+        val dbPatterns = patterns.getAll()
+        val upperSender = sender.uppercase(java.util.Locale.ROOT)
+        val matched = dbPatterns.firstOrNull { upperSender.contains(it.bankSenderId.uppercase(java.util.Locale.ROOT)) }
+        val outcome = if (matched != null) {
+            SmsParser.parse(sender, body, LocalDate.now(), senderWeight = matched.baseConfidenceWeight)
+        } else {
+            SmsParser.parse(sender, body, LocalDate.now())
+        }
         val fields = outcome.fields
         val msg = SmsMessage(
             rawBody = body,
@@ -100,6 +108,7 @@ class AfecRepository(context: Context) {
 
     /** Queue action: Approve & Add (PRD §05 Screen 02), with any user-edited fields. */
     suspend fun approveSms(msg: SmsMessage, edited: TrackedInstrument): TrackedInstrument {
+        recordCorrection(msg, edited)
         val item = edited.copy(
             source = InstrumentSource.SMS_PARSED, sourceSmsId = msg.id,
             status = if (edited.maturityDateEpoch < startOfToday()) InstrumentStatus.OVERDUE
@@ -109,6 +118,30 @@ class AfecRepository(context: Context) {
         sms.update(msg.copy(userAction = SmsUserAction.APPROVED, parseResult = ParseResult.SUCCESS))
         scheduler.scheduleFor(item, getPreferences())
         return item
+    }
+
+    /**
+     * PRD S04 error recovery: user corrections feed back into local heuristic weighting.
+     * Edited date/amount -> trust this sender less (-5, floor 10); clean approve -> trust more (+2, cap 40).
+     */
+    private suspend fun recordCorrection(msg: SmsMessage, edited: TrackedInstrument) {
+        val draft = draftFromSms(msg) ?: return
+        val corrected = draft.maturityDateEpoch != edited.maturityDateEpoch ||
+            draft.principalAmount != edited.principalAmount || draft.title != edited.title
+        val upperSender = msg.sender.uppercase(java.util.Locale.ROOT)
+        val existing = patterns.getAll()
+            .firstOrNull { upperSender.contains(it.bankSenderId.uppercase(java.util.Locale.ROOT)) }
+        val senderId = existing?.bankSenderId
+            ?: msg.sender.filter { it.isLetterOrDigit() }.take(12).ifBlank { "UNKNOWN" }
+        val newWeight = if (corrected) {
+            ((existing?.baseConfidenceWeight ?: 30) - 5).coerceAtLeast(10)
+        } else {
+            ((existing?.baseConfidenceWeight ?: 30) + 2).coerceAtMost(40)
+        }
+        patterns.insertAll(listOf(
+            (existing ?: ParserPattern(bankSenderId = senderId))
+                .copy(bankSenderId = senderId, baseConfidenceWeight = newWeight)
+        ))
     }
 
     suspend fun dismissSms(msg: SmsMessage) =

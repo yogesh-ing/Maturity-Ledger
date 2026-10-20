@@ -5,13 +5,14 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /*
- * PRD §11 requires encryption at rest (SQLCipher / Keystore AES-256-GCM).
- * Phase 1 ships the plain Room database so the build stays dependency-light and
- * reproducible; wiring SQLCipher is a one-line `.openHelperFactory(...)` change here
- * and is tracked in IMPLEMENTATION_STATUS.md. No INTERNET permission is declared,
- * so data cannot leave the device (PRD §09/§11 zero-network guarantee).
+ * PRD SS11: Room DB encrypted at rest with SQLCipher; the passphrase is wrapped
+ * by an Android Keystore AES-256-GCM key (see DatabaseKeyProvider).
+ * The encrypted database uses a new file name: the pre-encryption plain database
+ * (dev builds only, never released) is deleted on first launch of this build.
+ * No network permission is declared, so data cannot leave the device (SS09/SS11).
  */
 @Database(
     entities = [
@@ -35,10 +36,15 @@ abstract class AFECDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AFECDatabase =
             INSTANCE ?: synchronized(this) {
+                val appContext = context.applicationContext
+                runCatching { System.loadLibrary("sqlcipher") }
+                appContext.deleteDatabase("afec-database") // legacy plain DB from dev builds
                 INSTANCE ?: Room.databaseBuilder(
-                    context.applicationContext,
+                    appContext,
                     AFECDatabase::class.java,
-                    "afec-database"
+                    "afec-secure-database"
+                ).openHelperFactory(
+                    SupportOpenHelperFactory(DatabaseKeyProvider.passphrase(appContext))
                 ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
             }
     }

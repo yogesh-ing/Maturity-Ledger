@@ -57,6 +57,10 @@ dependencies {
     implementation 'androidx.room:room-ktx:2.6.1'
     ksp 'androidx.room:room-compiler:2.6.1'
 
+    // SS11 encryption at rest: SQLCipher + AndroidX SQLite (Keystore-wrapped passphrase)
+    implementation 'net.zetetic:sqlcipher-android:4.5.4'
+    implementation 'androidx.sqlite:sqlite-ktx:2.4.0'
+
     // Background work fallback (PRD §07 WorkManager + AlarmManager)
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
 
