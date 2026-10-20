@@ -1,14 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary brand color. -->
-    <color name="primary">#6200EE</color>
-    <!-- Secondary brand color. -->
-    <color name="secondary">#03DAC6</color>
-    <!-- Background color. -->
-    <color name="background">#FAFAFA</color>
-    <!-- Surface color. -->
-    <color name="surface">#FFFFFF</color>
-    <!-- Error color. -->
-    <color name="error">#B00020</color>
-    <!-- On background color. -->
-    <color name="onBackground">#212121</color>
+    <!-- PRD §06 tokens (mirror of ui/theme/Color.kt for XML surfaces like the widget) -->
+    <color name="primary600">#4F46E5</color>
+    <color name="primary100">#E0E7FF</color>
+    <color name="accent500">#14B8A6</color>
+    <color name="slate50">#F8FAFC</color>
+    <color name="slate900">#0F172A</color>
+    <color name="urgent">#DC2626</color>
+    <color name="white">#FFFFFF</color>
 </resources>
