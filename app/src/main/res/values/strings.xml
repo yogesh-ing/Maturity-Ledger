@@ -1,7 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AFEC</string>
+    <string name="widget_description">Nearest upcoming financial expiry</string>
     <string name="action_add_manual">Add Manual Entry</string>
     <string name="dismiss">Dismiss</string>
-    <string name="approve_add">Approve & Add to Dashboard</string>
+    <string name="approve_add">Approve &amp; Add to Dashboard</string>
     <string name="cancel">Cancel</string>
 </resources>
