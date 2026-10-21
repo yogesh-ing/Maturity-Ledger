@@ -15,20 +15,33 @@ private val LightColors = lightColorScheme(
     primaryContainer = Primary100, onPrimaryContainer = Primary900,
     secondary = Accent500, onSecondary = Slate50,
     secondaryContainer = Accent50, onSecondaryContainer = Accent700,
+    tertiary = ComfortableGreen, onTertiary = Slate50,
+    tertiaryContainer = ComfortableGreenContainer,
+    onTertiaryContainer = ComfortableOnGreenContainer,
     background = Slate50, onBackground = Slate900,
     surface = Slate50, onSurface = Slate900,
     surfaceVariant = Slate100, onSurfaceVariant = Slate700,
-    outline = Slate300, error = UrgentRed
+    surfaceContainer = Slate100, surfaceContainerHigh = Slate200,
+    outline = Slate300, outlineVariant = Slate200,
+    error = UrgentRed, errorContainer = UrgentRedContainer,
+    onErrorContainer = UrgentOnRedContainer
 )
 
 private val DarkColors = darkColorScheme(
     primary = Primary300, onPrimary = Primary900,
     primaryContainer = Primary700, onPrimaryContainer = Primary100,
     secondary = Accent300, onSecondary = Accent700,
+    secondaryContainer = Accent700, onSecondaryContainer = Accent50,
+    tertiary = ComfortableGreen, onTertiary = DarkBase,
+    tertiaryContainer = DarkComfortableGreenContainer,
+    onTertiaryContainer = ComfortableGreenContainer,
     background = DarkBase, onBackground = DarkOnSurface,
     surface = DarkBase, onSurface = DarkOnSurface,
     surfaceVariant = DarkRaised, onSurfaceVariant = DarkOnSurface,
-    outline = DarkOverlay, error = UrgentRed
+    surfaceContainer = DarkRaised, surfaceContainerHigh = DarkOverlay,
+    outline = DarkOverlay, outlineVariant = DarkRaised,
+    error = UrgentRed, errorContainer = DarkUrgentRedContainer,
+    onErrorContainer = UrgentRedContainer
 )
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
