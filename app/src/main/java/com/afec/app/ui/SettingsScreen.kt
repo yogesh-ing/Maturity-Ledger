@@ -12,14 +12,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -92,9 +100,15 @@ fun SettingsScreen(
     ) {
         Text("Alert Settings", style = MaterialTheme.typography.headlineMedium)
 
-        Card {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Milestone alerts (9:00 AM)", style = MaterialTheme.typography.titleMedium)
+        Card(
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SectionHeader(Icons.Default.Notifications, "Milestone alerts (9:00 AM)")
                 ToggleRow("14 Days Out", preferences.alert14Days) {
                     onSavePreferences(preferences.copy(alert14Days = it))
                 }
@@ -108,7 +122,7 @@ fun SettingsScreen(
                     onSavePreferences(preferences.copy(alertDayOf = it))
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("Custom day offsets", style = MaterialTheme.typography.titleMedium)
+                Text("Custom day offsets", style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     preferences.customOffsets.forEach { offset ->
                         AssistChip(
@@ -143,21 +157,39 @@ fun SettingsScreen(
                     "Channels: Urgent (day-of & ≤3d, chime + vibration) · " +
                         "Standard (7/14d) · Parsing Activity (silent). " +
                         "Same-day alerts are grouped into one summary.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         if (batteryOptimised) {
-            Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.errorContainer)) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Battery optimization may delay alerts", style = MaterialTheme.typography.titleMedium)
+            Card(
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Column(Modifier.padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.BatteryAlert,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Battery optimization may delay alerts",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         "Whitelist AFEC so 9:00 AM milestone alarms fire on time.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     Button(onClick = {
                         runCatching {
                             context.startActivity(
@@ -177,9 +209,15 @@ fun SettingsScreen(
             }
         }
 
-        Card {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Appearance", style = MaterialTheme.typography.titleMedium)
+        Card(
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionHeader(Icons.Default.Palette, "Appearance")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ThemeMode.values().forEach { mode ->
                         FilterChip(themeMode == mode, { onThemeMode(mode) }, { Text(mode.name) })
@@ -188,23 +226,30 @@ fun SettingsScreen(
             }
         }
 
-        Card {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Data", style = MaterialTheme.typography.titleMedium)
+        Card(
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionHeader(Icons.Default.Storage, "Data")
                 OutlinedButton(onRescanSms, enabled = hasSmsPermission) {
                     Text("Rescan last 90 days of SMS")
                 }
                 if (!hasSmsPermission) {
                     Text(
                         "SMS permission is off — AFEC is in manual-entry mode.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 OutlinedButton(onExportCsv) { Text("Export to CSV") }
                 OutlinedButton(onExportPdf) { Text("Export to PDF") }
                 Text(
                     "Fully offline: AFEC requests no internet permission and stores everything in a local Room database. Raw SMS are auto-purged after 30 days.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 TextButton({ showReset = true }) {
@@ -213,6 +258,20 @@ fun SettingsScreen(
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun SectionHeader(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(title, style = MaterialTheme.typography.titleMedium)
     }
 }
 
