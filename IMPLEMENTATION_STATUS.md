@@ -75,3 +75,18 @@ Highlights (all static verification only — see the build caveat below):
 - Fixed **navigation/feedback**: system Back on Detail exited the app; snackbars raised from Detail were swallowed; the dashboard nested a second `Scaffold`.
 - Fixed **content**: raw enum names (`FD`, `Sort: DATE`, `SYSTEM`), emoji section headings, a dead "sort by urgency" option, a wrong empty state under filters, raw `₹500000.0` amounts in the queue, and a queue "Edit" sheet whose Save button actually approved the item.
 - **Design-system alignment**: shape scale corrected to PRD §06 (8/12/16/24), full M3 surface-role set defined (no more baseline-purple fallbacks), card anatomy (4dp accent, dot status chip), shared countdown-progress metaphor, 48dp primary CTAs.
+
+## UI preview (browser, not the APK)
+`preview/` contains a standalone, interactive HTML/CSS/JS rendering of the Compose
+screens — same PRD §06 tokens, same layout rules — for reviewing UI/UX without an
+Android toolchain. Serve it and open it:
+
+```
+cd preview && python3 -m http.server 8080
+# then open http://localhost:8080
+```
+
+It covers onboarding (4 steps), dashboard (filters/sort/empty states), verification
+queue, detail, add/edit sheet, settings and the reset dialog, with light/dark,
+"wallpaper colours" (Material You) and a 360 dp viewport. It is a design preview,
+not a substitute for the first real build.
