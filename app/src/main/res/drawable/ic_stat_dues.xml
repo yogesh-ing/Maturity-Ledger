@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+
+    <!-- Monochrome hourglass for the status-bar/notification small icon (matches the launcher mark). -->
+
+    <!-- Top cap -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5,3 L19,3 L19,5 L5,5 Z" />
+
+    <!-- Bottom cap -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5,19 L19,19 L19,21 L5,21 Z" />
+
+    <!-- Upper glass -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7,6 L17,6 L12,12 Z" />
+
+    <!-- Lower glass -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,12 L17,18 L7,18 Z" />
+</vector>

@@ -84,7 +84,7 @@ object NotificationHelper {
         )
 
         val notification = NotificationCompat.Builder(context, if (urgent) CHANNEL_URGENT else CHANNEL_STANDARD)
-            .setSmallIcon(R.drawable.ic_stat_afec)
+            .setSmallIcon(R.drawable.ic_stat_dues)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -100,8 +100,8 @@ object NotificationHelper {
     /** S10: multiple same-day alerts collapse into one expandable summary. Call after showMilestone. */
     fun showGroupSummary(context: Context, urgent: Boolean) {
         val notification = NotificationCompat.Builder(context, if (urgent) CHANNEL_URGENT else CHANNEL_STANDARD)
-            .setSmallIcon(R.drawable.ic_stat_afec)
-            .setContentTitle("AFEC maturity alerts")
+            .setSmallIcon(R.drawable.ic_stat_dues)
+            .setContentTitle("Dues maturity alerts")
             .setContentText("You have instruments maturing soon — tap an alert for details")
             .setStyle(NotificationCompat.InboxStyle().setSummaryText("Maturity alerts"))
             .setGroup("afec_milestones")
@@ -114,7 +114,7 @@ object NotificationHelper {
     /** S04 happy path: background equivalent of the toast confirmation for an auto-added item. */
     fun showAutoAdded(context: Context, item: TrackedInstrument) {
         val notification = NotificationCompat.Builder(context, CHANNEL_PARSING)
-            .setSmallIcon(R.drawable.ic_stat_afec)
+            .setSmallIcon(R.drawable.ic_stat_dues)
             .setContentTitle("Added to Dashboard")
             .setContentText("${item.title} - ${DateMath.formatDate(item.maturityDateEpoch)}")
             .setContentIntent(openDetailIntent(context, item.id))
@@ -125,7 +125,7 @@ object NotificationHelper {
 
     fun showQueued(context: Context, count: Int) {
         val notification = NotificationCompat.Builder(context, CHANNEL_PARSING)
-            .setSmallIcon(R.drawable.ic_stat_afec)
+            .setSmallIcon(R.drawable.ic_stat_dues)
             .setContentTitle("New item in Verification Queue")
             .setContentText("$count parsed SMS need your review")
             .setContentIntent(

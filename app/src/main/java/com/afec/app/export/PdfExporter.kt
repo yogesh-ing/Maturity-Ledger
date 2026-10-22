@@ -40,7 +40,7 @@ object PdfExporter {
             val page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create())
             val canvas = page.canvas
             var y = 48f
-            canvas.drawText("AFEC - Maturity Ledger", 40f, y, titlePaint); y += 22f
+            canvas.drawText("Dues - Maturity Ledger", 40f, y, titlePaint); y += 22f
             canvas.drawText("Exported ${DateMath.formatDate(System.currentTimeMillis())} - ${items.size} instruments (on-device export)", 40f, y, subPaint); y += 28f
             while (idx < lines.size && y < pageHeight - 48f) {
                 val (text, paint) = lines[idx]
@@ -64,7 +64,7 @@ object PdfExporter {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Export AFEC data (PDF)").apply {
+        context.startActivity(Intent.createChooser(intent, "Export Dues data (PDF)").apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         })
     }

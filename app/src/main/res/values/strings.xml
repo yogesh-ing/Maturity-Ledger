@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AFEC</string>
-    <string name="widget_description">Nearest upcoming financial expiry</string>
-    <string name="action_add_manual">Add Manual Entry</string>
-    <string name="dismiss">Dismiss</string>
-    <string name="approve_add">Approve &amp; Add to Dashboard</string>
-    <string name="cancel">Cancel</string>
+    <string name="app_name">Dues</string>
+    <string name="onboarding_title">Never miss a subscription, EMI, or delivery again.</string>
+    <string name="onboarding_subtitle">Dues auto-reads your SMS — with permission — extracts upcoming expiries, and counts down. Everything stays on this device.</string>
+    <string name="widget_title">Nearest Expiry</string>
+    <string name="widget_initial_text">No upcoming expiries.</string>
+    <string name="widget_provider_description">Shows the nearest upcoming expiry.</string>
+    <string name="notification_channel_name">Expiry Alerts</string>
+    <string name="notification_channel_description">All Dues expiry &amp; parsing notifications</string>
 </resources>
