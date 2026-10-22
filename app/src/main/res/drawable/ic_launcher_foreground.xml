@@ -1,8 +1,29 @@
-<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- White hourglass silhouette (top/bottom caps + bowtie glass), centered in the
+         adaptive-icon safe zone. High-contrast white reads clearly on the gradient. -->
+
+    <!-- Top cap -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,26a28,28 0,1 1,0 56,28 28,0 0,1 0,-56zM54,36a18,18 0,1 0,0 36,18 18,0 0,0 0,-36zM50,40h8v22h-8zM50,66h8v6h-8z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M36,29 h36 a2,2 0 0 1 2,2 v3 a2,2 0 0 1 -2,2 h-36 a2,2 0 0 1 -2,-2 v-3 a2,2 0 0 1 2,-2 z" />
+
+    <!-- Bottom cap -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M36,72 h36 a2,2 0 0 1 2,2 v3 a2,2 0 0 1 -2,2 h-36 a2,2 0 0 1 -2,-2 v-3 a2,2 0 0 1 2,-2 z" />
+
+    <!-- Upper glass (sand draining toward the waist) -->
+    <path
+        android:fillColor="#CCFFFFFF"
+        android:pathData="M39,37 L69,37 L54,54 Z" />
+
+    <!-- Lower glass (accumulated sand) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,54 L39,71 L69,71 Z" />
 </vector>

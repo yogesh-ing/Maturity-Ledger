@@ -29,7 +29,7 @@ class NearestExpiryWidget : AppWidgetProvider() {
                     if (nearest == null) {
                         views.setTextViewText(R.id.widget_title, "No upcoming expiries")
                         views.setTextViewText(R.id.widget_days, "—")
-                        views.setTextViewText(R.id.widget_sub, "Open AFEC to add your first instrument")
+                        views.setTextViewText(R.id.widget_sub, "Open Dues to add your first instrument")
                     } else {
                         val days = DateMath.daysLeft(nearest.maturityDateEpoch)
                         views.setTextViewText(R.id.widget_title, nearest.title)

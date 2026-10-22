@@ -185,7 +185,7 @@ fun SettingsScreen(
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Whitelist AFEC so 9:00 AM milestone alarms fire on time.",
+                        "Whitelist Dues so 9:00 AM milestone alarms fire on time.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -240,7 +240,7 @@ fun SettingsScreen(
                 }
                 if (!hasSmsPermission) {
                     Text(
-                        "SMS permission is off — AFEC is in manual-entry mode.",
+                        "SMS permission is off — Dues is in manual-entry mode.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -248,7 +248,7 @@ fun SettingsScreen(
                 OutlinedButton(onExportCsv) { Text("Export to CSV") }
                 OutlinedButton(onExportPdf) { Text("Export to PDF") }
                 Text(
-                    "Fully offline: AFEC requests no internet permission and stores everything in a local Room database. Raw SMS are auto-purged after 30 days.",
+                    "Fully offline: Dues requests no internet permission and stores everything in a local Room database. Raw SMS are auto-purged after 30 days.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

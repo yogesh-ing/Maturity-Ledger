@@ -63,7 +63,7 @@ fun OnboardingScreen(
         OnboardingSlide(
             Icons.Default.NotificationsActive,
             "Never miss a maturity again",
-            "AFEC turns scattered bank SMS into one visual countdown, so an FD never quietly rolls over at a bad rate."
+            "Dues turns scattered bank SMS into one visual countdown, so an FD never quietly rolls over at a bad rate."
         ),
         OnboardingSlide(
             Icons.Default.Security,
@@ -109,7 +109,7 @@ fun OnboardingScreen(
                         Spacer(Modifier.width(16.dp))
                         Column {
                             Text(
-                                "AFEC",
+                                "Dues",
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = Color.White
                             )
@@ -132,7 +132,7 @@ fun OnboardingScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                Text("Why AFEC asks for SMS access", style = MaterialTheme.typography.headlineMedium)
+                Text("Why Dues asks for SMS access", style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(12.dp))
                 Card(
                     shape = MaterialTheme.shapes.large,
@@ -144,7 +144,7 @@ fun OnboardingScreen(
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
                             "Bank SMS contain your FD maturity, card expiry and renewal dates. " +
-                                "AFEC reads them only on this device to build your countdown — " +
+                                "Dues reads them only on this device to build your countdown — " +
                                 "messages are never uploaded, shared or used for anything else. " +
                                 "Raw SMS are deleted after 30 days.",
                             style = MaterialTheme.typography.bodyLarge

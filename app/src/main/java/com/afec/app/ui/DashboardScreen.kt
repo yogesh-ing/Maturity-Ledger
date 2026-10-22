@@ -263,7 +263,7 @@ private fun DashboardHeader(
             ) {
                 Column {
                     Text(
-                        "AFEC",
+                        "Dues",
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White
                     )
@@ -357,7 +357,7 @@ private fun EmptyState(onAdd: () -> Unit) {
             Text("Nothing tracked yet", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
             Text(
-                "AFEC watches FD maturities, card expiries and renewals from your " +
+                "Dues watches FD maturities, card expiries and renewals from your " +
                     "financial SMS — all on-device, nothing leaves this phone.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

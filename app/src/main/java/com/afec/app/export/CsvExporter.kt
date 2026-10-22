@@ -35,7 +35,7 @@ object CsvExporter {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Export AFEC data").apply {
+        context.startActivity(Intent.createChooser(intent, "Export Dues data").apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         })
     }
