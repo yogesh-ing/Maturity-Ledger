@@ -131,13 +131,21 @@ data class ConfidenceStyle(val background: Color, val foreground: Color, val lab
 @ReadOnlyComposable
 fun confidenceStyle(score: Int): ConfidenceStyle {
     val dark = isDarkSurface()
+    val high = if (dark) {
+        DarkComfortableGreenContainer to DarkOnComfortableContainer
+    } else {
+        ComfortableGreenContainer to ComfortableOnGreenContainer
+    }
+    val low = if (dark) {
+        DarkUrgentRedContainer to DarkOnUrgentContainer
+    } else {
+        UrgentRedContainer to UrgentOnRedContainer
+    }
     val (bg, fg) = when {
-        score >= 85 -> if (dark) DarkComfortableGreenContainer to DarkOnComfortableContainer
-        else ComfortableGreenContainer to ComfortableOnGreenContainer
+        score >= 85 -> high
         score >= 65 -> MaterialTheme.colorScheme.secondaryContainer to
             MaterialTheme.colorScheme.onSecondaryContainer
-        else -> if (dark) DarkUrgentRedContainer to DarkOnUrgentContainer
-        else UrgentRedContainer to UrgentOnRedContainer
+        else -> low
     }
     val label = when {
         score >= 85 -> "High · $score"
