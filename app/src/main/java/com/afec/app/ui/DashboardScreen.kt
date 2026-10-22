@@ -1,6 +1,8 @@
 package com.afec.app.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,9 +11,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
@@ -19,8 +24,8 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +37,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.afec.app.data.InstrumentStatus
 import com.afec.app.data.InstrumentType
@@ -40,6 +50,8 @@ import com.afec.app.data.TrackedInstrument
 import com.afec.app.domain.DateMath
 import com.afec.app.domain.UrgencyTier
 import com.afec.app.domain.urgencyTier
+import com.afec.app.ui.theme.HeroGradientEnd
+import com.afec.app.ui.theme.HeroGradientStart
 
 private enum class SortMode { DATE, AMOUNT, URGENCY }
 
@@ -80,9 +92,11 @@ fun DashboardScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) {
-                Icon(Icons.Default.Add, contentDescription = "Add Manual")
-            }
+            ExtendedFloatingActionButton(
+                onClick = onAdd,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text("Add") }
+            )
         }
     ) { padding ->
         LazyColumn(
@@ -91,20 +105,12 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column {
-                        Text("AFEC", style = MaterialTheme.typography.headlineMedium)
-                        Text(
-                            "Automated Financial Expiry Countdown",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
+                DashboardHeader(
+                    active = active,
+                    completed = completed,
+                    onOpenSettings = onOpenSettings
+                )
+                Spacer(Modifier.height(4.dp))
                 val nearest = active.minByOrNull { it.maturityDateEpoch }
                 AssistChip(
                     onClick = { nearest?.let(onItemClick) ?: onAdd() },
@@ -208,24 +214,156 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dashboardSection(
     onItemClick: (TrackedInstrument) -> Unit
 ) {
     if (list.isEmpty()) return
-    item { Text(title, style = androidx.compose.material3.MaterialTheme.typography.titleLarge) }
+    item {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "${list.size}",
+                style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
+    }
     items(list, key = { it.id }) { item ->
         CountdownCard(item, onClick = { onItemClick(item) })
     }
 }
 
+/** Dashboard header: gradient hero + summary stats row + settings icon. */
+@Composable
+private fun DashboardHeader(
+    active: List<TrackedInstrument>,
+    completed: List<TrackedInstrument>,
+    onOpenSettings: () -> Unit
+) {
+    Card(
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(HeroGradientStart, HeroGradientEnd)
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column {
+                    Text(
+                        "AFEC",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color.White
+                    )
+                    Text(
+                        "Automated Financial Expiry Countdown",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                }
+                IconButton(onClick = onOpenSettings) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = Color.White
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                SummaryStat("Total", active.size + completed.size, Color.White)
+                SummaryStat(
+                    "Urgent",
+                    active.count { urgencyTier(DateMath.daysLeft(it.maturityDateEpoch)) in
+                        listOf(UrgencyTier.OVERDUE, UrgencyTier.URGENT) },
+                    Color(0xFFFFCDD2)
+                )
+                SummaryStat(
+                    "Approaching",
+                    active.count { urgencyTier(DateMath.daysLeft(it.maturityDateEpoch)) ==
+                        UrgencyTier.APPROACHING },
+                    Color(0xFFFFE0B2)
+                )
+                SummaryStat(
+                    "Comfortable",
+                    active.count { urgencyTier(DateMath.daysLeft(it.maturityDateEpoch)) ==
+                        UrgencyTier.COMFORTABLE },
+                    Color(0xFFC8E6C9)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryStat(label: String, value: Int, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            "$value",
+            style = MaterialTheme.typography.headlineMedium,
+            color = color,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.85f)
+        )
+    }
+}
+
 @Composable
 private fun EmptyState(onAdd: () -> Unit) {
-    Card {
-        Column(Modifier.fillMaxWidth().padding(24.dp)) {
+    Card(
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+            Spacer(Modifier.height(16.dp))
             Text("Nothing tracked yet", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
             Text(
                 "AFEC watches FD maturities, card expiries and renewals from your " +
                     "financial SMS — all on-device, nothing leaves this phone.",
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp)
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
             Button(onClick = onAdd) { Text("Add your first instrument") }
         }
     }
