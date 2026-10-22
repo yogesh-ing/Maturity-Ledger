@@ -1,0 +1,13 @@
+<resources>
+    <!--
+      Dark window shell. Without this the launch window stayed Slate 50 while
+      Compose switched to dark tokens, producing a white flash and — because
+      onboarding/detail content is drawn on the window background — light text
+      on a light surface.
+    -->
+    <style name="Theme.AFEC" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/slate900</item>
+        <item name="android:statusBarColor">@color/slate900</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

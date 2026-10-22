@@ -39,6 +39,10 @@ class AfecViewModel(application: Application) : AndroidViewModel(application) {
     )
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
+    /** FR-14 Material You is opt-in; the PRD indigo/teal system is the default. */
+    private val _dynamicColor = MutableStateFlow(uiPrefs.getBoolean("dynamic_color", false))
+    val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
+
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
     fun clearMessage() { _message.value = null }
@@ -54,6 +58,11 @@ class AfecViewModel(application: Application) : AndroidViewModel(application) {
     fun setThemeMode(mode: ThemeMode) {
         uiPrefs.edit().putString("theme_mode", mode.name).apply()
         _themeMode.value = mode
+    }
+
+    fun setDynamicColor(enabled: Boolean) {
+        uiPrefs.edit().putBoolean("dynamic_color", enabled).apply()
+        _dynamicColor.value = enabled
     }
 
     fun saveInstrument(item: TrackedInstrument) = viewModelScope.launch {

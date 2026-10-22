@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Compose owns all styling (PRD §06 tokens); this only covers the window shell. -->
     <style name="Theme.AFEC" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/slate50</item>
         <item name="android:statusBarColor">@color/primary600</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

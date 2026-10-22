@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-dynamic="false">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Dues — UI preview</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- The sandbox serves this file from preview/ : `python3 -m http.server 8080` -->
+<div class="stage">
+
+  <!-- ── Side panel: controls + context (hidden on phones) ─────────────── -->
+  <aside class="meta">
+    <div class="meta-brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 3.2a8.8 8.8 0 1 0 0 17.6 8.8 8.8 0 0 0 0-17.6Z"/><path d="M12 7.4V12l3.1 1.9"/></svg>
+      </div>
+      <div>
+        <h1>Dues <span>UI preview</span></h1>
+        <p class="meta-sub">Automated Financial Expiry Countdown</p>
+      </div>
+    </div>
+
+    <p class="meta-note">
+      Interactive rendering of the Jetpack&nbsp;Compose screens using the same
+      PRD&nbsp;§06 tokens and layouts. <strong>This is not the compiled APK</strong> —
+      this sandbox has no JDK / Android&nbsp;SDK and Google&nbsp;Maven is blocked.
+    </p>
+
+    <section class="meta-block">
+      <h2>Theme</h2>
+      <div class="segmented" role="group" aria-label="Theme">
+        <button data-theme-set="system">System</button>
+        <button data-theme-set="light">Light</button>
+        <button data-theme-set="dark">Dark</button>
+      </div>
+      <label class="meta-switch">
+        <span>Wallpaper colours <em>Material You</em></span>
+        <input type="checkbox" data-flag="dynamic" />
+        <i aria-hidden="true"></i>
+      </label>
+    </section>
+
+    <section class="meta-block">
+      <h2>Jump to</h2>
+      <div class="meta-links">
+        <button data-jump="onboarding">Onboarding</button>
+        <button data-jump="dashboard">Dashboard</button>
+        <button data-jump="queue">Inbox</button>
+        <button data-jump="detail">Detail</button>
+        <button data-jump="sheet">Add sheet</button>
+        <button data-jump="settings">Settings</button>
+      </div>
+      <label class="meta-switch">
+        <span>Inbox empty state</span>
+        <input type="checkbox" data-flag="queueEmpty" />
+        <i aria-hidden="true"></i>
+      </label>
+    </section>
+
+    <section class="meta-block">
+      <h2>Fixed in this pass</h2>
+      <ul class="meta-list">
+        <li>Add/Edit sheet no longer falls back to Material purple</li>
+        <li>Urgency chips &amp; badges use dark-mode containers</li>
+        <li>Hero gradient text now 4.75:1 (was 2.2:1)</li>
+        <li>Back on Detail returns instead of exiting</li>
+        <li>Filter-empty state no longer says “Nothing tracked yet”</li>
+        <li>Queue shows ₹5,00,000 and offers a manual fallback</li>
+      </ul>
+    </section>
+
+    <p class="meta-foot">Findings: <code>docs/UI_UX_AUDIT.md</code></p>
+  </aside>
+
+  <!-- ── Phone ────────────────────────────────────────────────────────── -->
+  <div class="device-wrap">
+    <div class="device-scaler">
+    <div class="device" id="device">
+      <div class="status-bar" aria-hidden="true">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">
+          <svg viewBox="0 0 20 14"><rect x="0" y="9" width="3" height="5" rx="1"/><rect x="4.5" y="6.5" width="3" height="7.5" rx="1"/><rect x="9" y="4" width="3" height="10" rx="1"/><rect x="13.5" y="1" width="3" height="13" rx="1"/></svg>
+          <svg viewBox="0 0 18 14"><path d="M1 5.2a12 12 0 0 1 16 0M4 8.4a7.6 7.6 0 0 1 10 0M7.2 11.4a3.2 3.2 0 0 1 3.6 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 26 14"><rect x="1" y="2" width="21" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="4" width="14" height="6" rx="1.6"/><path d="M24 5.6v2.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </span>
+      </div>
+
+      <main class="screen" id="screen" tabindex="-1"></main>
+
+      <nav class="bottom-nav" id="bottom-nav" hidden></nav>
+
+      <button class="fab" id="fab" hidden>
+        <span class="fab-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </span>
+        <span>Add</span>
+      </button>
+
+      <div class="sheet-root" id="sheet-root"></div>
+      <div class="snackbar-host" id="snackbar-host"></div>
+    </div>
+    </div>
+    <p class="device-caption">Click around — navigation, filters and the add/edit sheet all work.</p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

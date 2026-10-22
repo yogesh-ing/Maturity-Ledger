@@ -62,10 +62,15 @@ val AfecTypography = Typography(
 )
 
 // Corner radius — PRD §06: sm 8 / md 12 / lg 16 / xl 24 / full pills.
+// M3 slot mapping: small = chips/inputs, medium = buttons/small cards,
+// large = dashboard cards, extraLarge = bottom sheets/modals.
 val AfecShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(14.dp),
-    large = RoundedCornerShape(18.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(24.dp)
 )
+
+/** Height for primary CTAs (PRD §06 "Buttons — min height 48dp"). */
+val ButtonMinHeight = 48.dp
