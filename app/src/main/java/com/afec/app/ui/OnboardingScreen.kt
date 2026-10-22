@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -39,7 +42,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.afec.app.ui.theme.ButtonMinHeight
 import com.afec.app.ui.theme.HeroGradientEnd
 import com.afec.app.ui.theme.HeroGradientStart
 
@@ -48,10 +53,8 @@ import com.afec.app.ui.theme.HeroGradientStart
  * plain-language permission rationale → system permission dialog (handled by caller).
  * Denied → manual-entry fallback with guided CTA (see Dashboard banner).
  *
- * v2 enhancements (mobile-android-design skill):
- *  - Gradient hero banner with slide icon
- *  - Animated page-indicator dots
- *  - Elevated permission rationale card
+ * The slide column scrolls, so large font scales / small screens never clip the
+ * rationale or hide the permission buttons.
  */
 @Composable
 fun OnboardingScreen(
@@ -63,27 +66,30 @@ fun OnboardingScreen(
         OnboardingSlide(
             Icons.Default.NotificationsActive,
             "Never miss a maturity again",
-            "Dues turns scattered bank SMS into one visual countdown, so an FD never quietly rolls over at a bad rate."
+            "Dues turns scattered bank SMS into one visual countdown, so an FD never quietly " +
+                "rolls over at a bad rate."
         ),
         OnboardingSlide(
             Icons.Default.Security,
             "Private by design",
-            "Everything is parsed and stored only on this phone. No accounts, no cloud sync, no internet permission."
+            "Everything is parsed and stored only on this phone. No accounts, no cloud sync, " +
+                "no internet permission."
         ),
         OnboardingSlide(
             Icons.Default.Info,
             "Alerts before it matters",
-            "Cascading reminders 14, 7 and 3 days before — and on the day — each instrument matures or renews."
+            "Cascading reminders 14, 7 and 3 days before — and on the day — each instrument " +
+                "matures or renews."
         )
     )
+    val totalSteps = slides.size + 1
 
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column {
-            Spacer(Modifier.height(32.dp))
-            // Gradient hero banner with current slide icon
+    Column(Modifier.fillMaxSize().padding(24.dp)) {
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.Top
+        ) {
+            Spacer(Modifier.height(24.dp))
             Card(
                 shape = MaterialTheme.shapes.extraLarge,
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
@@ -101,10 +107,11 @@ fun OnboardingScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = if (slide < slides.size) slides[slide].icon else Icons.Default.Security,
+                            imageVector = if (slide < slides.size) slides[slide].icon
+                            else Icons.Default.Security,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(44.dp)
                         )
                         Spacer(Modifier.width(16.dp))
                         Column {
@@ -114,9 +121,9 @@ fun OnboardingScreen(
                                 color = Color.White
                             )
                             Text(
-                                "Automated Financial Expiry Countdown",
+                                "Every maturity, in one place",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.85f)
+                                color = Color.White.copy(alpha = 0.9f)
                             )
                         }
                     }
@@ -124,7 +131,12 @@ fun OnboardingScreen(
             }
             Spacer(Modifier.height(32.dp))
             if (slide < slides.size) {
-                Text(slides[slide].title, style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    slides[slide].title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Spacer(Modifier.height(12.dp))
                 Text(
                     slides[slide].body,
@@ -139,7 +151,7 @@ fun OnboardingScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
@@ -157,6 +169,7 @@ fun OnboardingScreen(
                     }
                 }
             }
+            Spacer(Modifier.height(24.dp))
         }
 
         Column {
@@ -166,7 +179,7 @@ fun OnboardingScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                repeat(4) { index ->
+                repeat(totalSteps) { index ->
                     val selected = index == slide
                     val width by animateDpAsState(
                         targetValue = if (selected) 24.dp else 8.dp,
@@ -175,7 +188,7 @@ fun OnboardingScreen(
                     )
                     val color by animateColorAsState(
                         targetValue = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outlineVariant,
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                         animationSpec = tween(300),
                         label = "dotColor"
                     )
@@ -189,27 +202,42 @@ fun OnboardingScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "Step ${minOf(slide + 1, 4)} of 4",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Step ${minOf(slide + 1, totalSteps)} of $totalSteps",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (slide > 0) {
+                    TextButton(onClick = { slide-- }) { Text("Back") }
+                }
+            }
             Spacer(Modifier.height(8.dp))
             if (slide < slides.size) {
-                Button({ slide++ }, Modifier.fillMaxWidth()) { Text("Continue") }
+                Button(
+                    onClick = { slide++ },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonMinHeight)
+                ) { Text("Continue") }
                 if (slide == slides.lastIndex) {
-                    TextButton(onSkipPermissions, Modifier.fillMaxWidth()) {
+                    TextButton(onClick = onSkipPermissions, modifier = Modifier.fillMaxWidth()) {
                         Text("Skip — I'll add instruments manually")
                     }
                 }
             } else {
-                Button(onRequestPermissions, Modifier.fillMaxWidth()) {
-                    Text("Allow SMS & notifications")
-                }
-                OutlinedButton(onSkipPermissions, Modifier.fillMaxWidth()) {
-                    Text("Continue without SMS access")
-                }
+                Button(
+                    onClick = onRequestPermissions,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonMinHeight)
+                ) { Text("Allow SMS & notifications") }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onSkipPermissions,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonMinHeight)
+                ) { Text("Continue without SMS access") }
             }
             Spacer(Modifier.height(8.dp))
         }

@@ -42,9 +42,9 @@ The parser's regex/scoring logic was additionally validated outside Android agai
 
 ### Phase 3 — Delight (partial)
 - [x] Home-screen widget: nearest upcoming expiry (FR-13, classic AppWidget — not Glance)
-- [x] Dashboard filter by type + sort by date/amount/urgency (FR-11)
+- [x] Dashboard filter by type/institution + sort by date/amount (FR-11; the redundant "urgency" sort was removed — it produced the same order as date)
 - [x] CSV **and PDF** export via share sheet (FR-12) — `CsvExporter` / `PdfExporter`, both covered by tests/preview code
-- [x] Light/Dark/System themes + Material You dynamic color on API 31+ (FR-14)
+- [x] Light/Dark/System themes (FR-14) + opt-in Material You dynamic color on API 31+ (brand palette stays the default)
 - [ ] Play Store build (PRD §14 defers this to Phase 3, sideload first)
 - [ ] Device QA matrix + closed beta (§13): needs physical devices / users
 
@@ -54,9 +54,9 @@ Run the unit tests, or add any of the 4 PRD Appendix SMS bodies via **Settings �
 ## Second-round completion (this update)
 - [x] Grouped summary notification for same-day milestone alerts (§10) + auto-add confirmation notification (§04 happy path; background-safe instead of a Toast)
 - [x] Correction → heuristic feedback (§04): approving an edited queue item adjusts that sender's `ParserPattern` weight (-5 edited / +2 clean, clamped), and ingestion actually scores with DB weights
-- [x] Dashboard filter by institution in addition to type (FR-11 complete: institution + type + sort date/amount/urgency)
+- [x] Dashboard filter by institution in addition to type (FR-11 complete: institution + type + sort date/amount)
 - [x] PDF export (FR-12 complete: CSV + PDF)
-- [x] Dynamic color (FR-14), SQLCipher encryption (§11)
+- [x] Dynamic color (FR-14, opt-in), SQLCipher encryption (§11)
 
 ## Still partial / not done (honest list)
 - Home-screen widget is a classic `AppWidgetProvider`, not Jetpack Glance as named in Phase 3 (FR-13 behaviour is met)
@@ -64,3 +64,14 @@ Run the unit tests, or add any of the 4 PRD Appendix SMS bodies via **Settings �
 - Unit-test coverage ≥80% (§09/§13) — parser/date/CSV tests exist; DAO/alarm instrumentation tests and the 50-template corpus are not complete
 - Device QA matrix (Pixel/Samsung/Xiaomi/OnePlus, API 26–34), closed beta, Play Store build (§13/§14) — require devices/users and a `READ_SMS`-policy decision
 - **The app has still never been compiled**: no JDK/Android SDK exists in this sandbox and Google/Maven hosts are blocked. First build = the CI workflow above (or Android Studio). Compile errors, if any, get fixed on that first run — only then can an APK be exported and committed under `apk/`.
+
+## UI/UX validation pass (2026-10-22)
+Full findings and rationale: **[`docs/UI_UX_AUDIT.md`](docs/UI_UX_AUDIT.md)**.
+
+Highlights (all static verification only — see the build caveat below):
+- Fixed a **theming escape**: the Add/Edit bottom sheet (and its date picker) was composed outside `AfecTheme` and rendered in default M3 purple, ignoring dark mode.
+- Fixed **dark-mode legibility**: onboarding/detail had no `Surface`/night window theme, and urgency chips always used the light pastel containers (the `Dark*Container` tokens existed but were unused). Dark-aware tier palettes now live in `ui/TierUi.kt`.
+- Fixed **WCAG contrast** on the gradient hero (2.2:1 → 4.75:1) and on the amber "Approaching" tier (2.9:1 → 4.6:1 on container surfaces).
+- Fixed **navigation/feedback**: system Back on Detail exited the app; snackbars raised from Detail were swallowed; the dashboard nested a second `Scaffold`.
+- Fixed **content**: raw enum names (`FD`, `Sort: DATE`, `SYSTEM`), emoji section headings, a dead "sort by urgency" option, a wrong empty state under filters, raw `₹500000.0` amounts in the queue, and a queue "Edit" sheet whose Save button actually approved the item.
+- **Design-system alignment**: shape scale corrected to PRD §06 (8/12/16/24), full M3 surface-role set defined (no more baseline-purple fallbacks), card anatomy (4dp accent, dot status chip), shared countdown-progress metaphor, 48dp primary CTAs.

@@ -38,6 +38,7 @@ class NearestExpiryWidget : AppWidgetProvider() {
                             when {
                                 days < 0 -> "${-days}d overdue"
                                 days == 0L -> "Today"
+                                days == 1L -> "1 day left"
                                 else -> "$days days left"
                             }
                         )
