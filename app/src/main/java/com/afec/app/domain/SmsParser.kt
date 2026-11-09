@@ -173,8 +173,9 @@ object SmsParser {
         return when {
             "fixed deposit" in t || Regex("""\bfd\b""").containsMatchIn(t) -> InstrumentType.FD
             "recurring deposit" in t || Regex("""\brd\b""").containsMatchIn(t) -> InstrumentType.RD
-            "debit card" in t || "credit card" in t || "card ending" in t || "card" in t -> InstrumentType.CARD
+            // Subscription first: those SMS often name the charging "card" as payment method.
             "subscription" in t || "membership" in t || "prime" in t || "netflix" in t -> InstrumentType.SUBSCRIPTION
+            "debit card" in t || "credit card" in t || "card ending" in t || "card" in t -> InstrumentType.CARD
             else -> InstrumentType.OTHER
         }
     }
