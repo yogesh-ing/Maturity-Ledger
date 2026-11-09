@@ -706,10 +706,16 @@ svg { display: block; }
   display: flex; flex-direction: column; gap: 12px;
   scrollbar-width: none;
 }
+/* Children keep their content height; without this the cards shrink and clip
+   their own text (the Detail hero card lost its "Source: …" line). */
+.detail-body > * { flex: none; }
 .detail-body::-webkit-scrollbar { display: none; }
 
 /* FAB clearance at the end of the dashboard list */
 .screen.has-fab { padding-bottom: 104px; }
+
+/* Snackbars must clear the extended FAB instead of colliding with it */
+.device.with-fab .snackbar-host { bottom: 164px; }
 
 /* hidden attribute must win over the component display rules */
 .fab[hidden], .bottom-nav[hidden] { display: none; }

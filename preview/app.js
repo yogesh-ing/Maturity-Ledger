@@ -10,7 +10,7 @@
 const PATHS = {
   home: '<path d="M4 10.6 12 4l8 6.6V20a1 1 0 0 1-1 1h-4.6v-6H9.6v6H5a1 1 0 0 1-1-1Z"/>',
   inbox: '<path d="M4 5.5h16v13H4z"/><path d="M4 14h4l1.6 2.6h4.8L16 14h4"/>',
-  settings: '<circle cx="12" cy="12" r="3.1"/><path d="M12 3.4v2.2M12 18.4v2.2M3.4 12h2.2M18.4 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18"/>',
+  settings: '<circle cx="12" cy="12" r="3.1"/><path d="M19.1 14.6a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1.1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1.1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/>',
   add: '<path d="M12 5v14M5 12h14"/>',
   back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
   bell: '<path d="M18 15.6V11a6 6 0 1 0-12 0v4.6L4.6 18h14.8Z"/><path d="M9.6 21h4.8"/>',
@@ -766,7 +766,9 @@ function render() {
       </button>`;
   }
 
-  $fab.hidden = !(state.view === 'main' && state.tab === 'dashboard');
+  const showFab = state.view === 'main' && state.tab === 'dashboard';
+  $fab.hidden = !showFab;
+  document.getElementById('device').classList.toggle('with-fab', showFab);
 
   // Sheet
   if (state.sheet) {
