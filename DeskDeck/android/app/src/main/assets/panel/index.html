@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>DeskDeck</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header class="bar">
+    <span class="brand">DeskDeck</span>
+    <span id="status" class="chip" data-state="offline">Not paired</span>
+  </header>
+
+  <main id="panel" class="grid" hidden></main>
+
+  <section id="unpaired" class="unpaired">
+    <article id="pairing" class="card" hidden>
+      <h2>Pair this phone</h2>
+      <p class="muted">
+        On the PC open <code id="settings-url">http://127.0.0.1:8741</code>, press
+        <strong>Start pairing</strong>, then type the code it shows.
+      </p>
+      <div class="row">
+        <input id="code" type="text" inputmode="text" autocomplete="off" spellcheck="false"
+               maxlength="9" placeholder="ABCD-1234" aria-label="Pairing code">
+        <button id="pair" type="button">Pair</button>
+      </div>
+      <p id="pair-error" class="error" hidden></p>
+      <p id="pair-wait" class="muted small" hidden>Waiting for USB… connect the cable and allow USB debugging.</p>
+    </article>
+
+    <article id="connected" class="card" hidden>
+      <h2>Connected</h2>
+      <p class="value" id="pc-name">—</p>
+      <p class="muted small" id="device-line"></p>
+      <p class="muted small" id="caps-line"></p>
+    </article>
+  </section>
+
+  <!-- The control deck. The buttons come from the agent (built-ins plus whatever deck.json adds), so
+       the panel never hard-codes the vocabulary; each is drawn only for a capability the token has. -->
+  <nav id="deck" class="deck" hidden aria-label="PC controls">
+    <span id="deck-note" class="deck-note" role="status"></span>
+  </nav>
+
+  <footer id="foot" class="foot" hidden>
+    <span id="foot-pc" class="muted small"></span>
+    <button id="rotate" class="tiny" type="button">Rotate key</button>
+    <button id="forget" class="tiny" type="button">Forget this PC</button>
+  </footer>
+
+  <script type="module" src="panel.js"></script>
+</body>
+</html>

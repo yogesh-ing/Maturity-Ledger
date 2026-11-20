@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>DeskDeck settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body data-token="__SETTINGS_TOKEN__">
+  <header>
+    <h1>DeskDeck</h1>
+    <span id="agent" class="chip">agent</span>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Pair a phone</h2>
+      <p class="muted">Connect the phone with a USB cable, enable USB debugging, then start pairing and type the code shown here into the phone.</p>
+      <div id="pair-idle">
+        <button id="start" type="button">Start pairing</button>
+      </div>
+      <div id="pair-live" hidden>
+        <div id="code" class="code">----</div>
+        <dl>
+          <div><dt>Check code</dt><dd id="check">--</dd></div>
+          <div><dt>Expires</dt><dd id="expires">--</dd></div>
+        </dl>
+        <p class="muted small">Both screens must show the same check code. The code works once, for five attempts.</p>
+        <button id="cancel" class="ghost" type="button">Cancel</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>USB transport</h2>
+      <dl>
+        <div><dt>adb</dt><dd id="usb-adb">searching…</dd></div>
+        <div><dt>Devices</dt><dd id="usb-devices">—</dd></div>
+        <div><dt>Reverse port</dt><dd id="usb-reverse">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>Wi-Fi transport</h2>
+      <p class="muted">Serves the same API over TLS on your network, so a paired phone works without the cable. Pair over USB first: that is where the phone learns this PC's key pin. A new key means pairing again.</p>
+      <div class="row">
+        <button id="wifi-toggle" type="button">Enable Wi-Fi</button>
+        <span id="wifi-chip" class="chip">off</span>
+      </div>
+      <dl>
+        <div><dt>Address</dt><dd id="wifi-url">—</dd></div>
+        <div><dt>Key pin</dt><dd id="wifi-pin" class="mono">—</dd></div>
+      </dl>
+      <p id="wifi-error" class="error" hidden></p>
+    </section>
+
+    <section class="card">
+      <h2>Deck buttons</h2>
+      <p class="muted small">Media, volume, mute and lock are built in. Extra buttons come from
+        <code id="deck-file">deck.json</code>, next to <code>agent.json</code>; the agent reloads it
+        when it changes, so no restart is needed. A phone needs control granted below to press them.</p>
+      <ul id="deck-list" class="devices"><li class="muted">No custom buttons.</li></ul>
+      <p id="deck-errors" class="error" hidden></p>
+    </section>
+
+    <section class="card">
+      <h2>Paired phones</h2>
+      <ul id="devices" class="devices"><li class="muted">None yet.</li></ul>
+    </section>
+  </main>
+
+  <script src="settings.js"></script>
+</body>
+</html>

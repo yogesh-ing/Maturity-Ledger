@@ -1,0 +1,26 @@
+# Node
+node_modules/
+npm-debug.log*
+*.tsbuildinfo
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Agent runtime data (never commit tokens)
+agent.json
+*.log
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
