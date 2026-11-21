@@ -30,6 +30,11 @@ export type AgentConfig = {
   localToken: string;
   devices: DeviceRecord[];
   wifi: WifiConfig;
+  /**
+   * Which panel page each phone opens on, by device id. Absent means the layout's first page, so a
+   * layout edit never strands a phone on a page that no longer exists.
+   */
+  devicePages: Record<string, string>;
 };
 
 export const DEFAULT_WIFI_PORT = 8742;
@@ -64,7 +69,22 @@ function defaults(): AgentConfig {
     localToken: newToken(),
     devices: [],
     wifi: { enabled: false, port: DEFAULT_WIFI_PORT },
+    devicePages: {},
   };
+}
+
+const PAGE_ID = /^[a-z0-9_-]{1,24}$/;
+
+/** Assignments are advisory: an unknown page id is ignored when the phone asks for its layout. */
+function normalizePages(value: unknown): Record<string, string> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  const pages: Record<string, string> = {};
+  for (const [device, page] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof page !== "string" || !PAGE_ID.test(page)) continue;
+    if (!device.startsWith("dev_") || device.length > 40) continue;
+    pages[device] = page;
+  }
+  return pages;
 }
 
 function normalizeDevice(value: Partial<DeviceRecord>): DeviceRecord | null {
@@ -108,6 +128,7 @@ export function loadConfig(): AgentConfig {
       enabled: parsed.wifi?.enabled === true,
       port: Number.isInteger(parsed.wifi?.port) ? parsed.wifi!.port! : DEFAULT_WIFI_PORT,
     },
+    devicePages: normalizePages(parsed.devicePages),
   };
   if (config.localToken !== parsed.localToken) writePrivate(path, JSON.stringify(config, null, 2) + "\n");
   return config;

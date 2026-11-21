@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>DeskDeck layout editor</title>
+  <link rel="stylesheet" href="/editor.css">
+</head>
+<body data-token="__SETTINGS_TOKEN__">
+  <header class="top">
+    <h1>Layout editor</h1>
+    <span id="status" class="chip">loading…</span>
+    <div class="top-actions">
+      <button id="undo" class="ghost" type="button" title="Ctrl+Z">Undo</button>
+      <button id="redo" class="ghost" type="button" title="Ctrl+Shift+Z">Redo</button>
+      <button id="reload" class="ghost" type="button">Reload</button>
+      <button id="push" type="button">Push to phones</button>
+    </div>
+  </header>
+
+  <div id="conflict" class="banner" hidden>
+    <span>A newer layout was saved elsewhere. Your draft is still here.</span>
+    <button id="take-current" class="ghost" type="button">Load the saved one</button>
+  </div>
+
+  <main class="cols">
+    <aside class="side">
+      <section class="card">
+        <h2>Pages</h2>
+        <ul id="pages" class="list"></ul>
+        <div class="row">
+          <button id="add-page" class="ghost" type="button">Add page</button>
+          <button id="del-page" class="ghost danger" type="button">Delete page</button>
+        </div>
+        <label class="field">Title <input id="page-title" maxlength="40" autocomplete="off"></label>
+      </section>
+
+      <section class="card">
+        <h2>Widgets</h2>
+        <div id="palette" class="palette"></div>
+        <p class="muted small">Drag a widget to move it, drag its corner to resize. The grid is 12 × 8 and snaps to cells.</p>
+      </section>
+
+      <section class="card" id="inspector" hidden>
+        <h2>Selected</h2>
+        <label class="field">Title <input id="w-title" maxlength="40" placeholder="Default" autocomplete="off"></label>
+        <p id="w-meta" class="muted small"></p>
+        <button id="w-delete" class="ghost danger" type="button">Remove widget</button>
+      </section>
+
+      <section class="card">
+        <h2>Theme</h2>
+        <label class="field">Accent <input id="accent" type="color"></label>
+        <label class="field">Density
+          <select id="density">
+            <option value="compact">Compact</option>
+            <option value="comfortable">Comfortable</option>
+            <option value="roomy">Roomy</option>
+          </select>
+        </label>
+        <label class="field">Background
+          <select id="bg">
+            <option value="dark">Dark</option>
+            <option value="darker">Darker</option>
+            <option value="black">Black</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Phones</h2>
+        <p class="muted small">The page each phone opens on. Pair a phone first; a phone with no assignment opens the first page.</p>
+        <ul id="phones" class="list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>History</h2>
+        <p class="muted small">Every push keeps the version it replaced. Restoring adds a new version, so it can be undone too.</p>
+        <ul id="history" class="list"></ul>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <div id="board" class="board" role="application" aria-label="Layout canvas"></div>
+      <p class="muted small">The preview on the right is the phone's own panel bundle. Nothing reaches a phone until you push.</p>
+    </section>
+
+    <aside class="preview">
+      <h2>Live preview</h2>
+      <div class="frame">
+        <iframe id="preview" title="Panel preview" src="/preview"></iframe>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/editor.js"></script>
+</body>
+</html>

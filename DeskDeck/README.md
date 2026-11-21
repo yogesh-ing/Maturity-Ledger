@@ -14,11 +14,13 @@ see [docs/SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md) for what it does well and
 
 ## Status
 
-Phase 3b (v0.5.0): the app pairs with the agent over USB, keeps a per-phone token, renders a widget
+Phase 4 (v0.6.0): the app pairs with the agent over USB, keeps a per-phone token, renders a widget
 board the PC pushes over an SSE state stream, works with the cable unplugged over a pinned TLS link
 on the LAN, and presses media, volume, mute and lock buttons on the PC — plus your own buttons for
 launching an app or URL, sending a key combo, and sleeping the PC, all defined in `deck.json` on the
-PC. Macros and the trackpad are next in [docs/PLAN.md](docs/PLAN.md).
+PC. Layouts are edited in the browser now: drag and resize on a snapping grid, several pages,
+themes, a live preview drawn by the phone's own panel bundle, and a push that cannot overwrite a
+newer layout. Macros and the trackpad are next in [docs/PLAN.md](docs/PLAN.md).
 
 Working today:
 
@@ -32,6 +34,10 @@ Working today:
 - The panel is a 12×8 grid defined by a validated layout: clock, date, CPU/RAM/disk, network rates,
   now-playing, and the phone's own battery. Only changed widgets are pushed; an idle agent samples
   nothing at all. The panel dims after 90 s and wakes on touch.
+- **Layout editor** at `http://127.0.0.1:8741/editor`: drag, resize, snap, up to 8 pages, undo/redo,
+theme (accent, density, background) and a live preview. Saving is optimistic (`If-Match` on the
+revision): a stale editor gets `409` and the current layout instead of clobbering it, and every push
+keeps the version it replaced so a rollback is one click.
 - **Wi-Fi transport** (off by default): the settings page starts a TLS listener on the LAN. Its
   self-signed certificate is pinned by each phone (SHA-256 of the SPKI, learned over USB), so no
   public CA is involved. Pairing, the settings page and every other unauthenticated route stay

@@ -7,6 +7,35 @@
   --accent: #4fd1c5;
   --danger: #f87171;
   --radius: 12px;
+  /* Set by the layout's theme: density changes this gap, never the page geometry. */
+  --pad: 10px;
+}
+
+/* Page tabs. Hidden unless the layout has more than one page. */
+.pager {
+  display: flex;
+  gap: 6px;
+  padding: 2px 14px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pager::-webkit-scrollbar { display: none; }
+
+.pagedot {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 12px;
+  border: 1px solid var(--surface-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.pagedot.current {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 * { box-sizing: border-box; }
@@ -58,11 +87,11 @@ body {
 
 /* The layout is a 12x8 grid; every rectangle comes from the agent's validated layout. */
 .grid {
+  gap: var(--pad);
   flex: 1;
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  gap: 7px;
   padding: 2px 12px 4px;
   min-height: 0;
 }

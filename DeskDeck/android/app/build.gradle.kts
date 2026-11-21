@@ -10,16 +10,30 @@ fun signingValue(name: String): String? =
 
 val releaseStore = signingValue("DESKDECK_STORE_FILE")
 
+// One copy of the panel bundle: the agent serves these same files as the editor's live preview, and
+// the APK packages them as assets/panel. Copying into the build directory keeps the source tree
+// clean and guarantees the preview and the phone run identical bytes.
+val panelAssetsDir = layout.buildDirectory.dir("generated/panelAssets")
+val syncPanelAssets by tasks.registering(Copy::class) {
+    from(rootProject.file("../agent/src/web/panel"))
+    into(panelAssetsDir.map { it.dir("panel") })
+}
+tasks.named("preBuild") { dependsOn(syncPanelAssets) }
+
 android {
     namespace = "dev.deskdeck.panel"
     compileSdk = 36
+
+    sourceSets {
+        getByName("main").assets.srcDir(panelAssetsDir)
+    }
 
     defaultConfig {
         applicationId = "dev.deskdeck.panel"
         minSdk = 23 // Android 6; old desk phones
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = 6
+        versionName = "0.6.0"
     }
 
     signingConfigs {

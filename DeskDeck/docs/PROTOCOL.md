@@ -51,6 +51,11 @@ unknown action ids return `404`.
 | DELETE | `/api/settings/devices/{id}` | settings session | Revoke a phone |
 | POST | `/api/settings/wifi` | settings session | Turn the LAN listener on or off (`{ "enabled": true }`) |
 | POST | `/api/settings/devices/{id}/capabilities` | settings session | Grant or withdraw control (`{ "input": true, "power": true }`) |
+| GET | `/api/settings/layout` | settings session | Layout, revision, history and deck for the editor |
+| PUT | `/api/settings/layout` | settings session + `If-Match` | Push a layout, producing a new revision |
+| POST | `/api/settings/layout/rollback` | settings session | Restore an earlier revision as a new one |
+| POST | `/api/settings/layout/reload` | settings session | Re-read `panel.json` after a hand edit |
+| POST | `/api/settings/devices/{id}/page` | settings session | Choose the page that phone opens on |
 
 Loading `/` mints a 12-hour random session token that is embedded in the page; the long-lived local
 token is accepted there too (for tooling) but never given to a browser.
@@ -174,14 +179,22 @@ input on the secure desktop, so actions do nothing while the PC is locked.
 
 ## Layout and widgets (phase 2)
 
-`GET /api/panel` answers the stored layout; the built-in page is used until one is pushed:
+`GET /api/panel` answers the stored layout plus the page this phone should open on; the built-in page
+is used until one is pushed:
 
 ```json
-{ "layout": { "version": 1, "updatedAt": 0, "pages": [ { "id": "home", "title": "Home",
-  "widgets": [ { "id": "clock", "type": "clock", "x": 0, "y": 0, "w": 7, "h": 4, "title": null } ] } ] } }
+{ "layout": { "version": 3, "updatedAt": 1763670000000,
+  "theme": { "accent": "#4fd1c5", "density": "comfortable", "background": "darker" },
+  "pages": [ { "id": "home", "title": "Home",
+  "widgets": [ { "id": "clock", "type": "clock", "x": 0, "y": 0, "w": 7, "h": 4, "title": null } ] } ] },
+  "deck": [ … ], "startPage": "home" }
 ```
 
 - The page is a 12×8 grid; `x`/`y` is the top-left cell and `w`/`h` the size in cells.
+- `startPage` is the page id that phone opens on (see *Per-phone pages* below); an id the layout no
+  longer has means "first page", so a layout edit cannot strand a phone.
+- Widget ids are unique across the whole layout, not per page: state is keyed by id, and a duplicate
+  would let one page paint another page's numbers.
 - Widget types: `clock`, `date`, `system`, `network`, `nowplaying`, `phone`. A widget of any other
   type is dropped by the validator and never reaches the panel (`photo` waits for a scoped media
   route, see docs/PLAN.md).
@@ -236,6 +249,69 @@ Only a paired phone may call this, and it can only describe itself: the device c
 never from the body. `level` must be a number and `charging` a boolean, otherwise `400`. A report
 older than five minutes stops being served, so a sleeping phone shows "No report yet" instead of a
 stale number. Batteries are kept in memory only.
+
+## Layout editing (phase 4)
+
+Layouts are edited in the browser at `http://127.0.0.1:8741/editor` (loopback only, same session token
+as the settings page) and pushed to the agent. The phone is never involved in editing — it only sees
+the result on its next `/api/panel` poll.
+
+### Revisions and `If-Match`
+
+Every accepted push becomes a new revision: `version` is assigned by the agent, never by the client.
+The editor loads the layout and its revision (`"v3"`), then writes it back with that value:
+
+```
+PUT /api/settings/layout
+If-Match: "v3"
+{ "theme": { … }, "pages": [ … ] }
+```
+
+| Answer | Meaning |
+|---|---|
+| `200` `{ layout, etag, history }` | Accepted; `layout.version` is the new revision |
+| `409 stale_layout` `{ error, layout, etag }` | Something else saved first; the body carries the current layout |
+| `400 bad_layout` | The layout did not validate; nothing was written |
+| `400 bad_request` | Body missing, not JSON, or over 256 KB |
+
+`If-Match: *` overwrites unconditionally (tooling only). Omitting the header skips the check, which
+is how a rollback writes. `version` and `updatedAt` in the request body are ignored.
+
+### History and rollback
+
+`GET /api/settings/layout` returns `history`: the last 10 revisions, newest first, each `{ version,
+updatedAt, pages, theme }`. `POST /api/settings/layout/rollback` `{ "version": 2 }` restores that
+revision **as a new revision**, so a rollback is itself undoable; an unknown or expired revision is
+`404 unknown_version`. `POST /api/settings/layout/reload` re-reads `panel.json` after a hand edit and
+returns the layout plus `error` when the file did not validate.
+
+### Pages and themes
+
+- Up to 8 pages; each page needs a `widgets` array (empty is fine) and an id matching
+  `[a-z0-9_-]{1,24}`. Page ids are what a phone is assigned to, so they are stable identifiers.
+- `theme` is three closed choices plus one colour: `accent` is `#rrggbb`, `density` is `compact`,
+  `comfortable` or `roomy`, and `background` is `dark`, `darker` or `black`. Anything unrecognised
+  falls back to the default instead of rejecting the layout; a layout can restyle the page, not the
+  app, because the values only ever reach three CSS variables the panel owns.
+
+### Per-phone pages
+
+`POST /api/settings/devices/{id}/page` `{ "page": "media" }` stores which page that phone opens on
+in `agent.json` (`devicePages`); `{ "page": null }` clears it. The assignment is kept on the PC, not
+on the phone, so revoking a phone or editing the layout cannot leave a device pointing at a page it
+chose itself. An assignment to a page that no longer exists is ignored and the first page is used.
+
+### Editor and preview routes
+
+| Route | Purpose |
+|---|---|
+| `/editor` | The editor page (loopback, mints a session token) |
+| `/preview` | Preview host: runs the phone's own `/panel/index.html` bundle |
+| `/panel/index.html`, `/panel/panel.js`, `/panel/panel.css` | The panel bundle, served from `agent/src/web/panel` — the same files the APK packages |
+
+The preview is the phone's real renderer, not a second one: the editor posts `{ type: "layout",
+layout, startPage, deck, capabilities }` into the iframe and the panel draws it. It accepts messages
+from the same origin only, stores nothing, and never sees a device credential.
 
 ## Compatibility
 

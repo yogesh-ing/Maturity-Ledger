@@ -6,12 +6,13 @@ Node 24 + TypeScript, no framework. Runs on the Windows PC and serves the panel 
 npm install
 npm start          # http://127.0.0.1:8741
 npm run typecheck
+npm test           # node --test: the layout engine, no agent and no Windows needed
 ```
 
 State lives in `%APPDATA%\DeskDeck\agent.json` (override with `DESKDECK_HOME`). It contains the local
 API token; the file is excluded from git.
 
-## What exists in 0.5.0 (phase 3b)
+## What exists in 0.6.0 (phase 4)
 
 - Loopback-only listener with `Host` and `Origin` validation; query strings never reach the log.
 - `GET /api/health` (no credential, no machine data).
@@ -21,6 +22,14 @@ API token; the file is excluded from git.
   loopback only) → per-phone token with capabilities, check code, device registry.
 - `GET /api/session`, `GET /api/panel`, `GET /api/state` behind a device token (capability `read`).
 - Layout store: a validated 12×8 grid (`layouts.ts`), built-in page when `panel.json` is absent.
+- Layout editor at `/editor` (`web/editor.*`): drag/resize on a snapping grid, up to 8 pages with
+  tabs, undo/redo, theme (accent, density, background) and a live preview that runs the phone's own
+  `web/panel` bundle in an iframe (`/preview`).
+- `GET /api/settings/layout`, `PUT` with `If-Match`, `POST …/rollback`, `POST …/reload`: every push
+  becomes a new revision, a stale save is `409`, and the last 10 revisions can be restored.
+- `POST /api/settings/devices/{id}/page`: which page one phone opens on, kept on the PC.
+- `layouts.test.ts` (`npm test`): validation, revision assignment, conflict, history cap, rollback,
+  theme normalization and per-device page resolution.
 - State collectors (`state.ts`): CPU from `os.cpus()` deltas, memory, disk via `statfs`, network
   byte rates from `netstat -e`, and now-playing from a Windows Runtime probe (`ps/nowplaying.ps1`).
 - `GET /api/stream`: SSE with per-widget subscription (`?w=id,id`), deltas only, 15 s heartbeat,

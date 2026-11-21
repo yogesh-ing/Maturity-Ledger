@@ -36,6 +36,11 @@ Output:
 android\app\build\outputs\apk\debug\app-debug.apk
 ```
 
+The panel bundle is no longer in `android/app/src/main/assets`: it lives once in `agent/src/web/panel`,
+because the agent serves those same files as the editor's live preview. A `syncPanelAssets` copy task
+runs before `preBuild` and puts them in `build/generated/panelAssets/panel`, which is registered as an
+assets source directory, so the APK still ships `assets/panel/index.html` at the same path.
+
 The debug variant installs as `dev.deskdeck.panel.debug`, so it can sit next to a release build. The
 first build downloads Gradle 8.13 and the Android Gradle Plugin (network needed) and takes roughly
 5–10 minutes; later builds are much faster because `org.gradle.caching=true`.

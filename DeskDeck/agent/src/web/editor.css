@@ -1,0 +1,160 @@
+:root {
+  --bg: #0b0f14;
+  --surface: #141b23;
+  --surface-2: #1b242e;
+  --text: #e6edf3;
+  --muted: #8b98a5;
+  --accent: #4fd1c5;
+  --danger: #f87171;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+button {
+  font: inherit;
+  color: #06121a;
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.45; cursor: default; }
+button.ghost { background: var(--surface-2); color: var(--text); }
+button.danger { color: var(--danger); }
+button.link { background: none; color: var(--text); padding: 0; text-align: left; }
+
+input, select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid #2a3744;
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid #1f2a35;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 5;
+}
+.top h1 { font-size: 17px; margin: 0; font-weight: 600; }
+.top-actions { margin-left: auto; display: flex; gap: 8px; }
+
+.chip {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.chip[data-state="ok"] { color: var(--accent); }
+.chip[data-state="error"] { color: var(--danger); }
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  background: #3a2410;
+  color: #fbbf24;
+  font-size: 13px;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: 280px minmax(320px, 1fr) 380px;
+  gap: 16px;
+  padding: 16px;
+  align-items: start;
+}
+@media (max-width: 1200px) {
+  .cols { grid-template-columns: 260px 1fr; }
+  .preview { grid-column: 1 / -1; }
+}
+
+.side { display: flex; flex-direction: column; gap: 12px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid #1f2a35;
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.card h2 { font-size: 13px; margin: 2px 0 8px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+
+.list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow: auto; }
+.row-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.row-item.current .link { color: var(--accent); }
+.row-item select { max-width: 130px; }
+
+.row { display: flex; gap: 8px; margin-bottom: 8px; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.palette { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+
+.stage { display: flex; flex-direction: column; gap: 8px; }
+
+/* The canvas is the phone page at a fixed aspect ratio: 12 × 8 cells. */
+.board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  background:
+    linear-gradient(to right, #1c2631 1px, transparent 1px) 0 0 / calc(100% / 12) calc(100% / 8),
+    linear-gradient(to bottom, #1c2631 1px, transparent 1px) 0 0 / calc(100% / 12) calc(100% / 8),
+    #0e151d;
+  border: 1px solid #26323f;
+  border-radius: var(--radius);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.w {
+  position: absolute;
+  background: var(--surface-2);
+  border: 1px solid #33414f;
+  border-radius: 8px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: grab;
+  overflow: hidden;
+}
+.w.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.w-label { font-size: 13px; }
+.w-size { font-size: 11px; color: var(--muted); }
+.handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  border-right: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  border-bottom-right-radius: 8px;
+  cursor: nwse-resize;
+}
+
+.preview h2 { font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.frame { position: relative; width: 100%; aspect-ratio: 3 / 2; border: 1px solid #26323f; border-radius: var(--radius); overflow: hidden; background: #000; }
+.frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }

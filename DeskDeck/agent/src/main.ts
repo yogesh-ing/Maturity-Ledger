@@ -10,6 +10,7 @@ import { readJson } from "./http.ts";
 import { LayoutStore } from "./layouts.ts";
 import { Pairing } from "./pairing.ts";
 import { layoutWidgetIds, StateHub } from "./state.ts";
+import { pageIdFor } from "./layouts.ts";
 import { AdbReverse } from "./adb.ts";
 import { lanAddresses } from "./tls.ts";
 import { WifiServer } from "./wifi.ts";
@@ -25,7 +26,7 @@ import {
   safeLogPath,
 } from "./security.ts";
 
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 const PAIR_BODY_LIMIT = 1024;
 const SETTINGS_SESSION_MS = 12 * 60 * 60_000;
 const WEB_DIR = join(dirname(fileURLToPath(import.meta.url)), "web");
@@ -63,7 +64,7 @@ const STREAM_HEARTBEAT_MS = 15_000;
 /** Short-lived credentials for the settings page, so the long-lived local token never reaches a browser. */
 const settingsSessions = new Map<string, number>();
 
-function send(res: ServerResponse, status: number, body: unknown): void {
+function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
   const payload = Buffer.from(JSON.stringify(body), "utf8");
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -71,6 +72,7 @@ function send(res: ServerResponse, status: number, body: unknown): void {
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
     "x-deskdeck-agent": VERSION,
+    ...headers,
   });
   res.end(payload);
 }
@@ -90,6 +92,24 @@ function sendText(res: ServerResponse, status: number, type: string, body: strin
 function asset(name: string): string {
   return readFileSync(join(WEB_DIR, name), "utf8");
 }
+
+/**
+ * Static pages on the loopback listener. `token` marks the two HTML pages that mint a settings
+ * session; scripts and styles are inert without one. The panel bundle is served here too, because the
+ * editor's preview runs the phone's own page rather than a second renderer that could drift.
+ */
+const STATIC_PAGES: Record<string, { file: string; type: string; token?: boolean }> = {
+  "/": { file: "settings.html", type: "text/html", token: true },
+  "/settings.js": { file: "settings.js", type: "text/javascript" },
+  "/settings.css": { file: "settings.css", type: "text/css" },
+  "/editor": { file: "editor.html", type: "text/html", token: true },
+  "/editor.js": { file: "editor.js", type: "text/javascript" },
+  "/editor.css": { file: "editor.css", type: "text/css" },
+  "/preview": { file: "preview.html", type: "text/html" },
+  "/panel/index.html": { file: "panel/index.html", type: "text/html" },
+  "/panel/panel.js": { file: "panel/panel.js", type: "text/javascript" },
+  "/panel/panel.css": { file: "panel/panel.css", type: "text/css" },
+};
 
 function issueSettingsSession(): string {
   const now = Date.now();
@@ -171,20 +191,20 @@ async function handle(req: IncomingMessage, res: ServerResponse, listener: Liste
     return;
   }
 
-  if (method === "GET" && (path === "/" || path === "/settings.js" || path === "/settings.css")) {
-    // The settings page belongs to the loopback listener only, even when the caller is the PC.
+  const pageFile = STATIC_PAGES[path];
+  if (method === "GET" && pageFile) {
+    // Settings, the editor and the panel bundle belong to the loopback listener only, even for the PC.
     if (!remoteIsLoopback(req) || listener.secure) {
       send(res, 404, { error: { code: "not_found", message: "Unknown endpoint" } });
       return;
     }
-    if (path === "/") {
-      const token = issueSettingsSession();
-      sendText(res, 200, "text/html", asset("settings.html").replace("__SETTINGS_TOKEN__", token));
-    } else if (path === "/settings.js") {
-      sendText(res, 200, "text/javascript", asset("settings.js"));
-    } else {
-      sendText(res, 200, "text/css", asset("settings.css"));
-    }
+    const body = asset(pageFile.file);
+    sendText(
+      res,
+      200,
+      pageFile.type,
+      pageFile.token ? body.replace("__SETTINGS_TOKEN__", issueSettingsSession()) : body,
+    );
     return;
   }
 
@@ -231,7 +251,122 @@ async function handle(req: IncomingMessage, res: ServerResponse, listener: Liste
         usb: adb.state,
         wifi: wifi.state(),
         deck: deck.view(),
+        layout: layoutSummary(),
+        devicePages: config.devicePages,
       });
+      return;
+    }
+
+    // The editor reads the layout with its revision, then writes it back with `If-Match`. A save
+    // built on an older revision is refused instead of quietly replacing someone else's work.
+    if (method === "GET" && path === "/api/settings/layout") {
+      send(
+        res,
+        200,
+        {
+          layout: layouts.get(),
+          etag: layouts.etag(),
+          history: layouts.history(),
+          deck: deckPayload(),
+          error: layouts.error,
+        },
+        { etag: layouts.etag() },
+      );
+      return;
+    }
+
+    if (method === "PUT" && path === "/api/settings/layout") {
+      const body = await readJson(req, 256 * 1024);
+      if (body === null) {
+        send(res, 400, { error: { code: "bad_request", message: "Expected a JSON layout" } });
+        return;
+      }
+      const result = layouts.push(body, headerOf(req, "if-match"));
+      if (!result.ok) {
+        const status = result.code === "conflict" ? 409 : result.code === "not_found" ? 404 : 400;
+        send(
+          res,
+          status,
+          {
+            error: {
+              code: result.code === "conflict" ? "stale_layout" : "bad_layout",
+              message: result.code === "conflict"
+                ? "The layout changed since you loaded it"
+                : "The layout did not validate",
+            },
+            layout: result.current,
+            etag: layouts.etag(),
+          },
+          { etag: layouts.etag() },
+        );
+        return;
+      }
+      console.log(`layout: pushed v${result.layout.version}`);
+      send(
+        res,
+        200,
+        { layout: result.layout, etag: layouts.etag(), history: layouts.history() },
+        { etag: layouts.etag() },
+      );
+      return;
+    }
+
+    if (method === "POST" && path === "/api/settings/layout/rollback") {
+      const body = await readJson(req, 1024);
+      const version = versionOf(body);
+      if (version === null) {
+        send(res, 400, { error: { code: "bad_request", message: "Expected an integer version" } });
+        return;
+      }
+      const result = layouts.rollback(version);
+      if (!result.ok) {
+        send(res, 404, {
+          error: { code: "unknown_version", message: "That revision is no longer in the history" },
+          history: layouts.history(),
+        });
+        return;
+      }
+      console.log(`layout: restored v${version} as v${result.layout.version}`);
+      send(
+        res,
+        200,
+        { layout: result.layout, etag: layouts.etag(), history: layouts.history() },
+        { etag: layouts.etag() },
+      );
+      return;
+    }
+
+    // Re-reads panel.json after a hand edit; the editor's Reload button means "show me the file".
+    if (method === "POST" && path === "/api/settings/layout/reload") {
+      const layout = layouts.reload();
+      send(
+        res,
+        200,
+        { layout, etag: layouts.etag(), history: layouts.history(), error: layouts.error },
+        { etag: layouts.etag() },
+      );
+      return;
+    }
+
+    // Which page one phone opens on. The agent keeps this, not the phone: a layout change cannot
+    // strand a device on a page it chose itself.
+    if (method === "POST" && path.startsWith("/api/settings/devices/") && path.endsWith("/page")) {
+      const id = decodeURIComponent(path.slice("/api/settings/devices/".length, -"page".length - 1));
+      const body = await readJson(req, 512);
+      const wanted = pageOf(body);
+      if (wanted === undefined) {
+        send(res, 400, { error: { code: "bad_request", message: "Expected page: an id or null" } });
+        return;
+      }
+      const record = devices.list().find((device) => device.id === id);
+      if (!record) {
+        send(res, 404, { error: { code: "not_found", message: "Unknown device" } });
+        return;
+      }
+      if (wanted === null) delete config.devicePages[id];
+      else config.devicePages[id] = wanted;
+      saveConfig(config);
+      send(res, 200, { ok: true, page: wanted });
       return;
     }
 
@@ -337,7 +472,7 @@ async function handle(req: IncomingMessage, res: ServerResponse, listener: Liste
       send(res, 403, { error: { code: "forbidden", message: "Token lacks read capability" } });
       return;
     }
-    send(res, 200, { layout: layouts.get(), deck: deckPayload() });
+    send(res, 200, { layout: layouts.get(), deck: deckPayload(), startPage: startPageFor(deviceIdOf(caller)) });
     return;
   }
 
@@ -546,6 +681,43 @@ function deckPayload(): unknown[] {
     });
   }
   return items;
+}
+
+/** The page a phone opens on: its own assignment, else the layout's first page. */
+function startPageFor(deviceId: string | null): string {
+  return pageIdFor(layouts.get(), deviceId ? config.devicePages[deviceId] : null);
+}
+
+/** Page counts and the revision, for the settings card: the full layout belongs to the editor. */
+function layoutSummary(): unknown {
+  const layout = layouts.get();
+  return {
+    version: layout.version,
+    updatedAt: layout.updatedAt,
+    etag: layouts.etag(),
+    theme: layout.theme,
+    pages: layout.pages.map((page) => ({ id: page.id, title: page.title, widgets: page.widgets.length })),
+    error: layouts.error,
+  };
+}
+
+function headerOf(req: IncomingMessage, name: string): string | null {
+  const value = req.headers[name];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function versionOf(body: unknown): number | null {
+  if (typeof body !== "object" || body === null) return null;
+  const version = (body as { version?: unknown }).version;
+  return typeof version === "number" && Number.isInteger(version) && version >= 0 ? version : null;
+}
+
+/** `page` is a page id, `null` to clear the assignment, or undefined when the body is unusable. */
+function pageOf(body: unknown): string | null | undefined {
+  if (typeof body !== "object" || body === null) return undefined;
+  const page = (body as { page?: unknown }).page;
+  if (page === null) return null;
+  return typeof page === "string" && /^[a-z0-9_-]{1,24}$/.test(page) ? page : undefined;
 }
 
 function confirmationOf(body: unknown): boolean {

@@ -111,13 +111,29 @@ Not verified: anything on Windows itself — the PowerShell helper, real media/v
 
 ## Phase 4 — Customization
 
-- [ ] Desktop layout editor in the browser: drag, resize, snap, multiple pages, undo.
-- [ ] Live preview using the same panel bundle the phone loads.
-- [ ] Layout push with optimistic versioning (`If-Match`), rollback to previous layout.
-- [ ] Themes: accent colour, density, background; per-device pages.
+- [x] Desktop layout editor in the browser (`/editor`): drag, resize, snap to cells, up to 8 pages,
+      undo/redo, add/remove widgets, page titles, keyboard delete.
+- [x] Live preview using the same panel bundle the phone loads: `/preview` hosts the phone's own
+      `panel.js` and drives it over `postMessage`, so the preview is not a second renderer.
+- [x] Layout push with optimistic versioning: `PUT /api/settings/layout` with `If-Match`, `409` and
+      the current layout on a stale save, `POST …/rollback` to any of the last 10 revisions.
+- [x] Themes (accent, density, background) and per-device pages, kept in `agent.json`.
 
 Acceptance: edit and push a layout without restarting the app; two paired phones keep independent
 pages; a stale editor save is rejected instead of overwriting.
+
+Verified 2026-11-20 against the layout engine only (`npm test`, 16 tests, Linux): the built-in page
+and default theme, dropping unknown types and duplicate ids (across pages too), clipping rectangles
+to the grid, rejecting a layout with no usable page, theme normalization, revision assignment and
+persistence, `conflict` on a stale `If-Match`, `*` as an unconditional push, invalid input leaving
+the stored layout alone, history length and cap, rollback-as-new-revision, `not_found` for an
+unknown revision, per-device page resolution, and the fallback when `panel.json` does not parse.
+`tsc --noEmit` passes.
+
+Not verified: the editor has never been opened in a browser (drag, resize, undo, push, rollback and
+the preview iframe are unexercised UI), the new routes have never been called over HTTP, and the APK
+has not been rebuilt — the panel bundle now lives in `agent/src/web/panel` and is copied into the
+APK's assets by Gradle.
 
 ## Phase 5 — Hardening and release
 

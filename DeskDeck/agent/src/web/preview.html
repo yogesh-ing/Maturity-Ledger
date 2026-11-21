@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>DeskDeck preview</title>
+  <link rel="stylesheet" href="/panel/panel.css">
+</head>
+<!-- Preview host for the editor: the phone's own panel bundle runs here unchanged. panel.js takes the
+     layout over postMessage instead of the native bridge, so what the editor shows is what the phone
+     draws, not a second renderer that can drift. -->
+<body class="preview">
+  <header class="bar">
+    <span class="brand">DeskDeck</span>
+    <span id="status" class="chip" data-state="online">Preview</span>
+  </header>
+
+  <nav id="pager" class="pager" aria-label="Panel pages" hidden></nav>
+  <main id="panel" class="grid"></main>
+
+  <section id="unpaired" class="unpaired" hidden>
+    <article id="pairing" class="card" hidden></article>
+    <article id="connected" class="card" hidden></article>
+  </section>
+
+  <nav id="deck" class="deck" hidden aria-label="PC controls">
+    <span id="deck-note" class="deck-note" role="status"></span>
+  </nav>
+
+  <footer id="foot" class="foot" hidden>
+    <span id="foot-pc" class="muted small">preview</span>
+  </footer>
+
+  <input id="code" hidden>
+  <button id="pair" hidden type="button"></button>
+  <p id="pair-error" hidden></p>
+  <p id="pair-wait" hidden></p>
+  <p id="pc-name" hidden></p>
+  <p id="device-line" hidden></p>
+  <p id="caps-line" hidden></p>
+  <button id="rotate" hidden type="button"></button>
+  <button id="forget" hidden type="button"></button>
+  <code id="settings-url" hidden></code>
+
+  <script type="module" src="/panel/panel.js"></script>
+</body>
+</html>

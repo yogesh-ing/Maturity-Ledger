@@ -1,6 +1,10 @@
 // DeskDeck panel. The device token and the transport live in the native activity; this script only
 // renders the layout it is given and the state the activity pushes. Nothing here holds a credential.
 const bridge = window.DeskDeck ?? null;
+// The editor's preview host loads this same file and drives it over postMessage instead of the
+// native bridge, so the preview cannot drift from what the phone draws.
+const previewMode = document.body.classList.contains("preview")
+  || new URLSearchParams(location.search).has("preview");
 
 const els = {
   status: document.getElementById("status"),
@@ -16,6 +20,7 @@ const els = {
   pcName: document.getElementById("pc-name"),
   deviceLine: document.getElementById("device-line"),
   capsLine: document.getElementById("caps-line"),
+  pager: document.getElementById("pager"),
   deck: document.getElementById("deck"),
   deckNote: document.getElementById("deck-note"),
   foot: document.getElementById("foot"),
@@ -40,6 +45,9 @@ let layout = null;
 let deckItems = [];
 let capabilities = [];
 let deviceState = {};
+// Which page is on screen. The agent names a start page per phone; the pager overrides it locally.
+let startPage = null;
+let pageIndex = 0;
 // Confirmation is armed per tile for three seconds; a second press inside that window runs it.
 const armed = new Map();
 const rendered = new Map();
@@ -203,16 +211,72 @@ function meter(label, valueText, fraction) {
   return row;
 }
 
-/** Builds one element per widget in the layout; state only fills the bodies afterwards. */
+const THEME_BACKGROUNDS = { dark: "#11161d", darker: "#0b0f14", black: "#000000" };
+const THEME_PADDING = { compact: "6px", comfortable: "10px", roomy: "16px" };
+
+/** A theme is three closed choices plus one colour: a layout can restyle the page, never the app. */
+function applyTheme(theme) {
+  if (!theme) return;
+  const root = document.documentElement;
+  if (typeof theme.accent === "string" && /^#[0-9a-f]{6}$/i.test(theme.accent)) {
+    root.style.setProperty("--accent", theme.accent);
+  }
+  const background = THEME_BACKGROUNDS[theme.background];
+  if (background) root.style.setProperty("--bg", background);
+  const padding = THEME_PADDING[theme.density];
+  if (padding) root.style.setProperty("--pad", padding);
+}
+
+function currentPages() {
+  return layout && Array.isArray(layout.pages) ? layout.pages : [];
+}
+
+function selectPage(index) {
+  const pages = currentPages();
+  if (pages.length === 0) return;
+  pageIndex = Math.min(pages.length - 1, Math.max(0, index));
+  startPage = null;
+  buildBoard();
+}
+
+/** One tab per page, shown only when the layout has more than one. */
+function renderPager() {
+  const pages = currentPages();
+  if (!els.pager) return;
+  els.pager.replaceChildren(...pages.map((entry, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = index === pageIndex ? "pagedot current" : "pagedot";
+    button.textContent = entry.title || `Page ${index + 1}`;
+    button.setAttribute("aria-current", index === pageIndex ? "true" : "false");
+    button.addEventListener("click", () => selectPage(index));
+    return button;
+  }));
+  els.pager.hidden = pages.length < 2;
+}
+
+/** Builds one element per widget on the selected page; state only fills the bodies afterwards. */
 function buildBoard() {
-  const page = layout && Array.isArray(layout.pages) ? layout.pages[0] : null;
+  const pages = currentPages();
   rendered.clear();
   els.panel.replaceChildren();
-  if (!page) {
+  applyTheme(layout && layout.theme);
+
+  if (pages.length === 0) {
+    renderPager();
     els.panel.append(element("p", "empty", "Waiting for a layout from the PC…"));
     return;
   }
+  // The agent says which page this phone opens on; an id the layout no longer has means page 1.
+  if (startPage) {
+    const wanted = pages.findIndex((entry) => entry.id === startPage);
+    if (wanted >= 0) pageIndex = wanted;
+    startPage = null;
+  }
+  if (pageIndex >= pages.length) pageIndex = 0;
+  renderPager();
 
+  const page = pages[pageIndex];
   for (const widget of page.widgets) {
     const card = element("article", "widget");
     card.dataset.type = widget.type;
@@ -309,6 +373,10 @@ window.onDeskDeckEvent = (type, payload) => {
   if (type === "panel") {
     layout = data.layout ?? null;
     deckItems = Array.isArray(data.deck) ? data.deck : [];
+    if (typeof data.startPage === "string") {
+      startPage = data.startPage;
+      pageIndex = 0;
+    }
     buildBoard();
     renderDeck(true, capabilities);
   }
@@ -407,7 +475,24 @@ setInterval(() => paint("clock"), 1000);
 setInterval(() => paint("date"), 30_000);
 paint("all");
 
-if (bridge) {
+if (previewMode) {
+  // The editor posts its draft here. Nothing is stored, and no credential is involved.
+  els.unpaired.hidden = true;
+  els.panel.hidden = false;
+  setChip("online", "Preview");
+  window.addEventListener("message", (event) => {
+    if (event.origin !== location.origin) return;
+    const data = event.data ?? {};
+    if (data.type !== "layout") return;
+    layout = data.layout ?? null;
+    deckItems = Array.isArray(data.deck) ? data.deck : [];
+    startPage = typeof data.startPage === "string" ? data.startPage : null;
+    pageIndex = 0;
+    capabilities = Array.isArray(data.capabilities) ? data.capabilities : ["read"];
+    buildBoard();
+    renderDeck(true, capabilities);
+  });
+} else if (bridge) {
   try {
     render(JSON.parse(bridge.status()));
   } catch {
