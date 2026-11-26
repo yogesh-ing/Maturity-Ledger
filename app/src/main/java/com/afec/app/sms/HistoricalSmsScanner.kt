@@ -31,7 +31,10 @@ object HistoricalSmsScanner {
                 val body = if (bodyIdx >= 0) it.getString(bodyIdx) ?: continue else continue
                 val date = if (dateIdx >= 0) it.getLong(dateIdx) else System.currentTimeMillis()
                 // Cheap pre-filter mirrors FR-01 keywords; full scoring happens in ingest.
-                if (com.afec.app.domain.SmsParser.KEYWORDS.any { k -> body.contains(k, true) }) {
+                // Mandate registrations/debits use their own vocabulary (e-mandate, Si-Hub).
+                if (com.afec.app.domain.SmsParser.KEYWORDS.any { k -> body.contains(k, true) } ||
+                    com.afec.app.domain.MandateParser.looksLikeMandate(body)
+                ) {
                     repo.ingestSms(sender, body, date)
                     ingested++
                 }

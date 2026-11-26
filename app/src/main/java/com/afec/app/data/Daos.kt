@@ -84,6 +84,34 @@ interface NotificationPreferenceDao {
 }
 
 @Dao
+interface CardMandateDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(mandate: CardMandate)
+
+    @Update
+    suspend fun update(mandate: CardMandate)
+
+    @Query("SELECT * FROM card_mandates ORDER BY nextDebitEpoch ASC")
+    fun observeAll(): Flow<List<CardMandate>>
+
+    @Query("SELECT * FROM card_mandates ORDER BY nextDebitEpoch ASC")
+    suspend fun getAll(): List<CardMandate>
+
+    @Query("SELECT * FROM card_mandates WHERE id = :id")
+    suspend fun getById(id: String): CardMandate?
+
+    /** Si-Hub ID / UMN: the stable identity shared by registration and debit SMS. */
+    @Query("SELECT * FROM card_mandates WHERE reference = :reference LIMIT 1")
+    suspend fun findByReference(reference: String): CardMandate?
+
+    @Query("DELETE FROM card_mandates WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM card_mandates")
+    suspend fun clearAll()
+}
+
+@Dao
 interface ParserPatternDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(patterns: List<ParserPattern>)

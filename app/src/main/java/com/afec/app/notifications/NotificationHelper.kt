@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.afec.app.MainActivity
 import com.afec.app.R
+import com.afec.app.data.CardMandate
 import com.afec.app.data.TrackedInstrument
 import com.afec.app.domain.DateMath
 
@@ -121,6 +122,26 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
         notifySafe(context, (item.id.hashCode() * 31 + 99), notification)
+    }
+
+    /** First sighting of a recurring card mandate, or a debit on a known one. */
+    fun showMandateTracked(context: Context, mandate: CardMandate, created: Boolean) {
+        val detail = listOfNotNull(
+            mandate.amount?.let { "₹" + formatInr(it) },
+            mandate.frequency.label.lowercase(java.util.Locale.getDefault()),
+            mandate.cardLabel
+        ).joinToString(" · ")
+        val notification = NotificationCompat.Builder(context, CHANNEL_PARSING)
+            .setSmallIcon(R.drawable.ic_stat_dues)
+            .setContentTitle(
+                if (created) "Mandate tracked: ${mandate.merchantName}"
+                else "Mandate debit: ${mandate.merchantName}"
+            )
+            .setContentText(detail)
+            .setAutoCancel(true)
+            .setGroup("afec_mandates")
+            .build()
+        notifySafe(context, mandate.id.hashCode() * 31 + 77, notification)
     }
 
     fun showQueued(context: Context, count: Int) {

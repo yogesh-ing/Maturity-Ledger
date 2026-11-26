@@ -40,6 +40,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.afec.app.data.CardMandate
+import com.afec.app.data.MandateStatus
 import com.afec.app.data.TrackedInstrument
 import com.afec.app.export.CsvExporter
 import com.afec.app.export.PdfExporter
@@ -49,6 +51,11 @@ private enum class Tab { DASHBOARD, QUEUE, SETTINGS }
 private sealed interface SheetState {
     data object New : SheetState
     data class Edit(val item: TrackedInstrument) : SheetState
+}
+
+private sealed interface MandateForm {
+    data object New : MandateForm
+    data class Edit(val mandate: CardMandate) : MandateForm
 }
 
 /**
@@ -75,12 +82,15 @@ fun AfecApp(
     val onboardingDone by viewModel.onboardingDone.collectAsState()
     val instruments by viewModel.instruments.collectAsState()
     val queue by viewModel.queue.collectAsState()
+    val mandates by viewModel.mandates.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
     val message by viewModel.message.collectAsState()
 
     var tab by remember { mutableStateOf(if (openQueueInitially) Tab.QUEUE else Tab.DASHBOARD) }
     var selectedId by remember { mutableStateOf(initialInstrumentId) }
     var sheet by remember { mutableStateOf<SheetState?>(null) }
+    var showMandates by remember { mutableStateOf(false) }
+    var mandateForm by remember { mutableStateOf<MandateForm?>(null) }
     var firstLinkHandled by remember { mutableStateOf(false) }
 
     fun smsPermissionGranted(): Boolean =
@@ -139,6 +149,7 @@ fun AfecApp(
         selectedId = null
         viewModel.clearSourceSms()
     }
+    BackHandler(enabled = selected == null && showMandates) { showMandates = false }
 
     AfecTheme(mode = themeMode, dynamicColor = dynamicColor) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -151,10 +162,19 @@ fun AfecApp(
                 )
             }
 
+            mandateForm?.let { form ->
+                MandateSheet(
+                    initial = (form as? MandateForm.Edit)?.mandate,
+                    onDismiss = { mandateForm = null },
+                    onSave = { viewModel.saveMandate(it); mandateForm = null },
+                    onDelete = { viewModel.deleteMandate(it); mandateForm = null }
+                )
+            }
+
             Scaffold(
                 snackbarHost = { SnackbarHost(snackbar) },
                 bottomBar = {
-                    if (onboardingDone && selected == null) {
+                    if (onboardingDone && selected == null && !showMandates) {
                         NavigationBar {
                             NavigationBarItem(
                                 selected = tab == Tab.DASHBOARD,
@@ -189,7 +209,7 @@ fun AfecApp(
                     }
                 },
                 floatingActionButton = {
-                    if (onboardingDone && selected == null && tab == Tab.DASHBOARD) {
+                    if (onboardingDone && selected == null && !showMandates && tab == Tab.DASHBOARD) {
                         ExtendedFloatingActionButton(
                             onClick = { sheet = SheetState.New },
                             icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -210,11 +230,26 @@ fun AfecApp(
                             onBack = { selectedId = null; viewModel.clearSourceSms() },
                             onEdit = { sheet = SheetState.Edit(it) }
                         )
+                        showMandates -> MandatesScreen(
+                            mandates = mandates,
+                            onBack = { showMandates = false },
+                            onAdd = { mandateForm = MandateForm.New },
+                            onEdit = { mandateForm = MandateForm.Edit(it) },
+                            onTogglePause = { m ->
+                                viewModel.setMandateStatus(
+                                    m,
+                                    if (m.status == MandateStatus.ACTIVE) MandateStatus.PAUSED
+                                    else MandateStatus.ACTIVE
+                                )
+                            }
+                        )
                         tab == Tab.DASHBOARD -> DashboardScreen(
                             instruments = instruments,
+                            mandates = mandates,
                             manualOnlyMode = !hasSmsPermission,
                             onAdd = { sheet = SheetState.New },
                             onOpenSettings = { tab = Tab.SETTINGS },
+                            onOpenMandates = { showMandates = true },
                             onItemClick = { selectedId = it.id },
                             onRestore = { viewModel.restore(it) },
                             onDeleteForever = { viewModel.deleteForever(it) }

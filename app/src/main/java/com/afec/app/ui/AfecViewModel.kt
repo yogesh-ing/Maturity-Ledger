@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.afec.app.data.AfecRepository
+import com.afec.app.data.CardMandate
+import com.afec.app.data.MandateStatus
 import com.afec.app.data.NotificationPreference
 import com.afec.app.data.SmsMessage
 import com.afec.app.data.TrackedInstrument
@@ -22,6 +24,9 @@ class AfecViewModel(application: Application) : AndroidViewModel(application) {
     private val uiPrefs = application.getSharedPreferences("afec_ui", 0)
 
     val instruments: StateFlow<List<TrackedInstrument>> = repo.observeInstruments()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val mandates: StateFlow<List<CardMandate>> = repo.observeMandates()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val queue: StateFlow<List<SmsMessage>> = repo.observeQueue()
@@ -68,6 +73,24 @@ class AfecViewModel(application: Application) : AndroidViewModel(application) {
     fun saveInstrument(item: TrackedInstrument) = viewModelScope.launch {
         repo.saveInstrument(item)
         _message.value = "Saved ${item.title}"
+    }
+
+    fun saveMandate(mandate: CardMandate) = viewModelScope.launch {
+        repo.saveMandate(mandate)
+        _message.value = "Saved ${mandate.merchantName}"
+    }
+
+    fun setMandateStatus(mandate: CardMandate, status: MandateStatus) = viewModelScope.launch {
+        repo.setMandateStatus(mandate, status)
+        _message.value = when (status) {
+            MandateStatus.PAUSED -> "${mandate.merchantName} paused"
+            MandateStatus.ACTIVE -> "${mandate.merchantName} resumed"
+            MandateStatus.REVOKED -> "${mandate.merchantName} marked cancelled"
+        }
+    }
+
+    fun deleteMandate(mandate: CardMandate) = viewModelScope.launch {
+        repo.deleteMandate(mandate); _message.value = "Mandate removed"
     }
 
     fun markCompleted(item: TrackedInstrument) = viewModelScope.launch {

@@ -28,6 +28,14 @@ class Converters {
     @TypeConverter fun stringToIntList(v: String?): List<Int> =
         v?.takeIf { it.isNotBlank() }?.split(",")?.mapNotNull { it.trim().toIntOrNull() } ?: emptyList()
 
+    @TypeConverter fun mandateFrequencyToString(v: MandateFrequency): String = v.name
+    @TypeConverter fun stringToMandateFrequency(v: String): MandateFrequency =
+        runCatching { MandateFrequency.valueOf(v) }.getOrDefault(MandateFrequency.MONTHLY)
+
+    @TypeConverter fun mandateStatusToString(v: MandateStatus): String = v.name
+    @TypeConverter fun stringToMandateStatus(v: String): MandateStatus =
+        runCatching { MandateStatus.valueOf(v) }.getOrDefault(MandateStatus.ACTIVE)
+
     @TypeConverter fun stringListToString(v: List<String>): String = v.joinToString("|")
     @TypeConverter fun stringToStringList(v: String): List<String> =
         if (v.isBlank()) emptyList() else v.split("|")

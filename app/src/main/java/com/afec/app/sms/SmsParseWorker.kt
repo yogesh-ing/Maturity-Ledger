@@ -22,6 +22,10 @@ class SmsParseWorker(appContext: Context, params: WorkerParameters) :
                     NotificationHelper.showQueued(applicationContext, 1)
                 is AfecRepository.IngestResult.AutoAdded ->
                     NotificationHelper.showAutoAdded(applicationContext, result.item)
+                is AfecRepository.IngestResult.MandateTracked ->
+                    NotificationHelper.showMandateTracked(
+                        applicationContext, result.mandate, result.created
+                    )
                 else -> Unit // silent log stays silent (S07)
             }
             Result.success()

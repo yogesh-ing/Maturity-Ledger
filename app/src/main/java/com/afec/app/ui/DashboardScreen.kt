@@ -47,10 +47,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.afec.app.data.CardMandate
 import com.afec.app.data.InstrumentStatus
 import com.afec.app.data.InstrumentType
+import com.afec.app.data.MandateStatus
 import com.afec.app.data.TrackedInstrument
 import com.afec.app.domain.DateMath
+import com.afec.app.domain.MandateMath
 import com.afec.app.domain.UrgencyTier
 import com.afec.app.domain.urgencyTier
 import com.afec.app.ui.theme.HeroGradientEnd
@@ -75,9 +78,11 @@ private enum class SortMode(val label: String) {
 @Composable
 fun DashboardScreen(
     instruments: List<TrackedInstrument>,
+    mandates: List<CardMandate>,
     manualOnlyMode: Boolean,
     onAdd: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenMandates: () -> Unit,
     onItemClick: (TrackedInstrument) -> Unit,
     onRestore: (TrackedInstrument) -> Unit,
     onDeleteForever: (TrackedInstrument) -> Unit
@@ -138,6 +143,10 @@ fun DashboardScreen(
                     }
                 )
             }
+        }
+
+        item {
+            MandateSummaryCard(mandates = mandates, onClick = onOpenMandates)
         }
 
         if (manualOnlyMode) {
@@ -497,6 +506,63 @@ private fun ArchivedCard(
                     Text("Delete forever", color = MaterialTheme.colorScheme.error)
                 }
             }
+        }
+    }
+}
+
+/**
+ * Mandates summary: what auto-debits from the cards each month, plus the next
+ * debit. Recurring commitments are not countdowns, so they get one compact card
+ * here and their own screen, instead of being mixed into the urgency sections.
+ */
+@Composable
+private fun MandateSummaryCard(mandates: List<CardMandate>, onClick: () -> Unit) {
+    val active = mandates.filter { it.status == MandateStatus.ACTIVE }
+    val next = active
+        .mapNotNull { m -> MandateMath.nextDebit(m)?.let { m to it } }
+        .minByOrNull { it.second }
+
+    Card(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Card mandates", style = MaterialTheme.typography.titleMedium)
+                if (mandates.isEmpty()) {
+                    Text(
+                        "Track what auto-debits from your cards each month",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    val total = MandateMath.monthlyTotal(mandates)
+                    val variableCount = active.count { it.amount == null || !it.frequency.isFixedSchedule }
+                    Text(
+                        MandateMath.formatRupees(total) + "/month · ${active.size} active" +
+                            if (variableCount > 0) " (+$variableCount variable)" else "",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        next?.let { (m, date) ->
+                            val days = MandateMath.daysUntil(date)
+                            "Next: ${m.merchantName} · " + when {
+                                days == 0L -> "today"
+                                days == 1L -> "tomorrow"
+                                else -> "in $days days"
+                            }
+                        } ?: "No upcoming debits",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            TextButton(onClick = onClick) { Text(if (mandates.isEmpty()) "Add" else "Manage") }
         }
     }
 }

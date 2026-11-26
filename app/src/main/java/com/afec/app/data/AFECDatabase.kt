@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /*
@@ -19,9 +21,10 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         TrackedInstrument::class,
         SmsMessage::class,
         NotificationPreference::class,
-        ParserPattern::class
+        ParserPattern::class,
+        CardMandate::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -30,8 +33,35 @@ abstract class AFECDatabase : RoomDatabase() {
     abstract fun smsDao(): SmsMessageDao
     abstract fun preferenceDao(): NotificationPreferenceDao
     abstract fun patternDao(): ParserPatternDao
+    abstract fun mandateDao(): CardMandateDao
 
     companion object {
+        /** v2 adds recurring card mandates; existing countdown data is preserved. */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `card_mandates` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`merchantName` TEXT NOT NULL, " +
+                        "`cardIssuer` TEXT NOT NULL, " +
+                        "`cardLast4` TEXT NOT NULL, " +
+                        "`amount` REAL, " +
+                        "`frequency` TEXT NOT NULL, " +
+                        "`nextDebitEpoch` INTEGER NOT NULL, " +
+                        "`lastDebitEpoch` INTEGER, " +
+                        "`mandateEndEpoch` INTEGER, " +
+                        "`reference` TEXT, " +
+                        "`status` TEXT NOT NULL, " +
+                        "`source` TEXT NOT NULL, " +
+                        "`sourceSmsId` TEXT, " +
+                        "`notes` TEXT, " +
+                        "`createdAt` INTEGER NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+            }
+        }
+
         @Volatile private var INSTANCE: AFECDatabase? = null
 
         fun getInstance(context: Context): AFECDatabase =
@@ -45,7 +75,8 @@ abstract class AFECDatabase : RoomDatabase() {
                     "afec-secure-database"
                 ).openHelperFactory(
                     SupportOpenHelperFactory(DatabaseKeyProvider.passphrase(appContext))
-                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2)
+                    .fallbackToDestructiveMigration().build().also { INSTANCE = it }
             }
     }
 }

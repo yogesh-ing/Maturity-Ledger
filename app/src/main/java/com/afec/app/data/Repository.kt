@@ -1,6 +1,8 @@
 package com.afec.app.data
 
 import android.content.Context
+import com.afec.app.domain.MandateMath
+import com.afec.app.domain.MandateParser
 import com.afec.app.domain.SmsParser
 import com.afec.app.notifications.AlarmScheduler
 import kotlinx.coroutines.flow.Flow
@@ -20,9 +22,11 @@ class AfecRepository(context: Context) {
     private val sms = db.smsDao()
     private val prefs = db.preferenceDao()
     private val patterns = db.patternDao()
+    private val mandates = db.mandateDao()
     private val scheduler = AlarmScheduler(appContext)
 
     fun observeInstruments(): Flow<List<TrackedInstrument>> = instruments.observeAll()
+    fun observeMandates(): Flow<List<CardMandate>> = mandates.observeAll()
     fun observeInstrument(id: String): Flow<TrackedInstrument?> = instruments.observeById(id)
     fun observeQueue(): Flow<List<SmsMessage>> = sms.observePending()
     fun observePreferences(): Flow<NotificationPreference> =
@@ -44,6 +48,24 @@ class AfecRepository(context: Context) {
 
     /** Entry point for every parsed SMS (live receiver, historical scan, tests). */
     suspend fun ingestSms(sender: String, body: String, receivedAtEpoch: Long): IngestResult {
+        // Recurring card mandates are their own shape; never let the expiry parser
+        // (which demands a maturity keyword) swallow them into the silent log.
+        val receivedDate = java.time.Instant.ofEpochMilli(receivedAtEpoch)
+            .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        MandateParser.parse(sender, body, receivedDate)?.let { parsed ->
+            val msg = SmsMessage(
+                rawBody = body,
+                sender = sender,
+                receivedAtEpoch = receivedAtEpoch,
+                parseResult = ParseResult.SUCCESS,
+                extractedFields = null,
+                confidenceScore = 90,
+                userAction = SmsUserAction.APPROVED
+            )
+            sms.insert(msg)
+            return trackMandate(parsed, msg.id)
+        }
+
         // Pluggable ParserPattern weights (PRD S07/S14): seeded + correction-tuned per sender.
         val dbPatterns = patterns.getAll()
         val upperSender = sender.uppercase(java.util.Locale.ROOT)
@@ -106,6 +128,68 @@ class AfecRepository(context: Context) {
         return item
     }
 
+    /**
+     * One mandate per Si-Hub ID / UMN: a registration SMS creates it, later debit
+     * SMS update the same row (last debit + rolled next debit) instead of piling up
+     * duplicates. Debits for an unknown reference still create a mandate, because
+     * seeing the charge is proof the mandate exists.
+     */
+    private suspend fun trackMandate(
+        parsed: MandateParser.ParsedMandate,
+        smsId: String
+    ): IngestResult {
+        val now = System.currentTimeMillis()
+        val existing = parsed.reference?.let { mandates.findByReference(it) }
+        if (existing == null) {
+            val nextEpoch = when {
+                parsed.isDebit && parsed.lastDebitEpoch != null ->
+                    MandateMath.nextAfterDebit(parsed.lastDebitEpoch!!, parsed.frequency)
+                parsed.startEpoch != null -> parsed.startEpoch!!
+                else -> now
+            }
+            val mandate = CardMandate(
+                merchantName = parsed.merchantName,
+                cardIssuer = parsed.cardIssuer,
+                cardLast4 = parsed.cardLast4,
+                amount = parsed.amount,
+                frequency = parsed.frequency,
+                nextDebitEpoch = nextEpoch,
+                lastDebitEpoch = parsed.lastDebitEpoch,
+                mandateEndEpoch = parsed.endEpoch,
+                reference = parsed.reference,
+                source = InstrumentSource.SMS_PARSED,
+                sourceSmsId = smsId
+            )
+            mandates.insert(mandate)
+            return IngestResult.MandateTracked(mandate, created = true)
+        }
+
+        val frequency = if (parsed.isRegistration) parsed.frequency else existing.frequency
+        val merged = existing.copy(
+            // Keep a name the user has edited; replace our own placeholder.
+            merchantName = if (existing.merchantName.startsWith("Card mandate"))
+                parsed.merchantName else existing.merchantName,
+            cardIssuer = if (existing.cardIssuer == "Card") parsed.cardIssuer else existing.cardIssuer,
+            cardLast4 = existing.cardLast4.ifBlank { parsed.cardLast4 },
+            amount = parsed.amount ?: existing.amount,
+            frequency = frequency,
+            mandateEndEpoch = parsed.endEpoch ?: existing.mandateEndEpoch,
+            reference = existing.reference ?: parsed.reference,
+            lastDebitEpoch = parsed.lastDebitEpoch ?: existing.lastDebitEpoch,
+            nextDebitEpoch = when {
+                parsed.isDebit && parsed.lastDebitEpoch != null ->
+                    MandateMath.nextAfterDebit(parsed.lastDebitEpoch!!, frequency)
+                parsed.isRegistration && parsed.startEpoch != null -> parsed.startEpoch!!
+                else -> existing.nextDebitEpoch
+            },
+            // A debit proves a revoked mandate is alive again.
+            status = if (existing.status == MandateStatus.REVOKED) MandateStatus.ACTIVE else existing.status,
+            updatedAt = now
+        )
+        mandates.update(merged)
+        return IngestResult.MandateTracked(merged, created = false)
+    }
+
     /** Queue action: Approve & Add (PRD §05 Screen 02), with any user-edited fields. */
     suspend fun approveSms(msg: SmsMessage, edited: TrackedInstrument): TrackedInstrument {
         recordCorrection(msg, edited)
@@ -154,6 +238,19 @@ class AfecRepository(context: Context) {
         if (instruments.getById(item.id) == null) instruments.insert(stamped) else instruments.update(stamped)
         scheduler.scheduleFor(stamped, getPreferences())
     }
+
+    suspend fun saveMandate(mandate: CardMandate) {
+        val stamped = mandate.copy(updatedAt = System.currentTimeMillis())
+        if (mandates.getById(mandate.id) == null) mandates.insert(stamped) else mandates.update(stamped)
+    }
+
+    suspend fun setMandateStatus(mandate: CardMandate, status: MandateStatus) {
+        mandates.update(mandate.copy(status = status, updatedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun deleteMandate(mandate: CardMandate) = mandates.deleteById(mandate.id)
+
+    suspend fun allMandates(): List<CardMandate> = mandates.getAll()
 
     suspend fun markCompleted(item: TrackedInstrument) {
         val done = item.copy(status = InstrumentStatus.COMPLETED, updatedAt = System.currentTimeMillis())
@@ -223,6 +320,7 @@ class AfecRepository(context: Context) {
     suspend fun resetAllData() {
         instruments.getAll().forEach { scheduler.cancelFor(it) }
         instruments.clearAll()
+        mandates.clearAll()
         sms.clearAll()
         prefs.clearAll()
     }
@@ -240,6 +338,7 @@ class AfecRepository(context: Context) {
 
     sealed interface IngestResult {
         data class AutoAdded(val item: TrackedInstrument) : IngestResult
+        data class MandateTracked(val mandate: CardMandate, val created: Boolean) : IngestResult
         data class Queued(val msg: SmsMessage) : IngestResult
         data class SilentlyLogged(val msg: SmsMessage) : IngestResult
     }
