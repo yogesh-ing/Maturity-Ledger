@@ -85,6 +85,7 @@ fun AfecApp(
     val mandates by viewModel.mandates.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
     val message by viewModel.message.collectAsState()
+    val scanning by viewModel.scanning.collectAsState()
 
     var tab by remember { mutableStateOf(if (openQueueInitially) Tab.QUEUE else Tab.DASHBOARD) }
     var selectedId by remember { mutableStateOf(initialInstrumentId) }
@@ -131,6 +132,12 @@ fun AfecApp(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // Permission may already be granted (granted in Settings, or before install of
+    // this build) — read the inbox once instead of waiting for a new grant event.
+    LaunchedEffect(hasSmsPermission) {
+        if (hasSmsPermission) viewModel.autoScanOnce()
     }
 
     val snackbar = remember { SnackbarHostState() }
@@ -264,10 +271,11 @@ fun AfecApp(
                             themeMode = themeMode,
                             dynamicColor = dynamicColor,
                             hasSmsPermission = hasSmsPermission,
+                            scanning = scanning,
                             onSavePreferences = { viewModel.savePreferences(it) },
                             onThemeMode = { viewModel.setThemeMode(it) },
                             onDynamicColor = { viewModel.setDynamicColor(it) },
-                            onRescanSms = { viewModel.rescanSms() },
+                            onScanSms = { viewModel.rescanSms(it) },
                             onExportCsv = { CsvExporter.shareCsv(context, instruments) },
                             onExportPdf = { PdfExporter.sharePdf(context, instruments) },
                             onResetAllData = { viewModel.resetAllData() }

@@ -10,6 +10,7 @@ import com.afec.app.data.NotificationPreference
 import com.afec.app.data.SmsMessage
 import com.afec.app.data.TrackedInstrument
 import com.afec.app.sms.HistoricalSmsScanner
+import com.afec.app.sms.SmsScanRange
 import com.afec.app.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -128,15 +129,47 @@ class AfecViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun clearSourceSms() { _selectedSms.value = null }
 
-    /** Historical 90-day scan after READ_SMS grant (PRD §04 onboarding). */
-    fun rescanSms() = viewModelScope.launch {
-        val found = runCatching { HistoricalSmsScanner.scanLast90Days(getApplication()) }
-            .getOrDefault(0)
-        _message.value = if (found > 0) "Scan complete — check Dashboard & Inbox"
-        else "Scan complete — no financial expiry SMS found"
+    private val _scanning = MutableStateFlow(false)
+    val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
+
+    /**
+     * Explicit inbox scan. The default (onboarding / permission grant) keeps the
+     * 90-day window; Settings can scan everything, the last month, or one month.
+     */
+    fun rescanSms(range: SmsScanRange = SmsScanRange.LastDays(90)) = performScan(range)
+
+    /**
+     * One inbox pass the first time the app opens with SMS access, so a user who
+     * granted the permission outside onboarding still gets their history read.
+     */
+    fun autoScanOnce() {
+        if (uiPrefs.getBoolean(KEY_AUTO_SCANNED, false)) return
+        performScan(SmsScanRange.All) {
+            uiPrefs.edit().putBoolean(KEY_AUTO_SCANNED, true).apply()
+        }
     }
+
+    private fun performScan(range: SmsScanRange, onDone: (() -> Unit)? = null) =
+        viewModelScope.launch {
+            if (_scanning.value) return@launch
+            _scanning.value = true
+            val result = HistoricalSmsScanner.scan(getApplication(), range)
+            _scanning.value = false
+            _message.value = when {
+                result.error != null -> "Scan failed — ${result.error}"
+                result.matched == 0 ->
+                    "Read ${result.scanned} SMS — none looked financial"
+                else ->
+                    "Read ${result.scanned} SMS · ${result.matched} matched · ${result.added} new"
+            }
+            if (result.error == null) onDone?.invoke()
+        }
 
     fun resetAllData() = viewModelScope.launch {
         repo.resetAllData(); _message.value = "All local data erased"
+    }
+
+    private companion object {
+        const val KEY_AUTO_SCANNED = "sms_auto_scanned"
     }
 }

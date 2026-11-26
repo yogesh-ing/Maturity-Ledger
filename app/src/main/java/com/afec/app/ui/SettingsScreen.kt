@@ -32,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,9 +53,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.afec.app.data.NotificationPreference
+import com.afec.app.sms.SmsScanRange
 import com.afec.app.ui.theme.ButtonMinHeight
 import com.afec.app.ui.theme.ThemeMode
 import com.afec.app.ui.theme.displayLabel
+import java.time.LocalDate
 
 /**
  * Screen 04 — Settings (PRD §05, FR-04/FR-10/FR-12/FR-14):
@@ -67,10 +71,11 @@ fun SettingsScreen(
     themeMode: ThemeMode,
     dynamicColor: Boolean,
     hasSmsPermission: Boolean,
+    scanning: Boolean,
     onSavePreferences: (NotificationPreference) -> Unit,
     onThemeMode: (ThemeMode) -> Unit,
     onDynamicColor: (Boolean) -> Unit,
-    onRescanSms: () -> Unit,
+    onScanSms: (SmsScanRange) -> Unit,
     onExportCsv: () -> Unit,
     onExportPdf: () -> Unit,
     onResetAllData: () -> Unit
@@ -79,6 +84,7 @@ fun SettingsScreen(
     var customInput by remember { mutableStateOf("") }
     var showReset by remember { mutableStateOf(false) }
     var resetText by remember { mutableStateOf("") }
+    var showScan by remember { mutableStateOf(false) }
 
     val powerManager = context.getSystemService(PowerManager::class.java)
     val batteryRestricted = remember {
@@ -89,6 +95,14 @@ fun SettingsScreen(
     // Declared explicitly: Compose cannot infer a @Composable lambda inside an if-expression.
     val offsetSupporting: (@Composable () -> Unit)? =
         if (offsetInvalid) { { Text("Enter a value between 1 and 365") } } else null
+
+    if (showScan) {
+        ScanSmsDialog(
+            scanning = scanning,
+            onDismiss = { showScan = false },
+            onScan = { range -> onScanSms(range); showScan = false }
+        )
+    }
 
     if (showReset) {
         AlertDialog(
@@ -325,10 +339,16 @@ fun SettingsScreen(
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingsSectionHeader(Icons.Default.Storage, "Data")
                 OutlinedButton(
-                    onClick = onRescanSms,
-                    enabled = hasSmsPermission,
+                    onClick = { showScan = true },
+                    enabled = hasSmsPermission && !scanning,
                     modifier = Modifier.fillMaxWidth().heightIn(min = ButtonMinHeight)
-                ) { Text("Rescan last 90 days of SMS") }
+                ) { Text(if (scanning) "Scanning SMS…" else "Scan SMS history") }
+                Text(
+                    "Choose all messages, the last month, or a month by number — " +
+                        "useful for mandates registered months ago.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if (!hasSmsPermission) {
                     Text(
                         "SMS permission is off — Dues is in manual-entry mode.",
@@ -360,6 +380,99 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/**
+ * Explicit scan range picker: everything, the last 30 days, or one calendar
+ * month given as a number (1–12) plus year.
+ */
+@Composable
+private fun ScanSmsDialog(
+    scanning: Boolean,
+    onDismiss: () -> Unit,
+    onScan: (SmsScanRange) -> Unit
+) {
+    val today = remember { LocalDate.now() }
+    var mode by remember { mutableIntStateOf(1) }
+    var monthText by remember { mutableStateOf(today.monthValue.toString()) }
+    var yearText by remember { mutableStateOf(today.year.toString()) }
+
+    val month = monthText.toIntOrNull()
+    val year = yearText.toIntOrNull()
+    val monthValid = month != null && month in 1..12 && year != null && year in 2000..today.year
+
+    AlertDialog(
+        onDismissRequest = { if (!scanning) onDismiss() },
+        title = { Text("Scan SMS history") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Dues reads locally and only keeps what it can parse. " +
+                        "Nothing is uploaded.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                listOf("All messages", "Last 30 days", "Month by number")
+                    .forEachIndexed { index, label ->
+                        FilterChip(
+                            selected = mode == index,
+                            onClick = { mode = index },
+                            label = { Text(label) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                if (mode == 2) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = monthText,
+                            onValueChange = { monthText = it.filter(Char::isDigit).take(2) },
+                            label = { Text("Month") },
+                            placeholder = { Text("1–12") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = yearText,
+                            onValueChange = { yearText = it.filter(Char::isDigit).take(4) },
+                            label = { Text("Year") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (!monthValid) {
+                        Text(
+                            "Enter a month 1–12 and a year up to ${today.year}.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                if (scanning) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(10.dp))
+                        Text("Reading messages…", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !scanning && (mode != 2 || monthValid),
+                onClick = {
+                    onScan(
+                        when (mode) {
+                            0 -> SmsScanRange.All
+                            1 -> SmsScanRange.LastDays(30)
+                            else -> SmsScanRange.Month(year!!, month!!)
+                        }
+                    )
+                }
+            ) { Text("Scan") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !scanning) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
