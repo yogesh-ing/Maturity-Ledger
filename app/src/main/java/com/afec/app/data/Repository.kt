@@ -2,11 +2,16 @@ package com.afec.app.data
 
 import android.content.Context
 import com.afec.app.domain.SmsParser
+import com.afec.app.domain.MonthlySpend
+import com.afec.app.domain.MonthlyTotal
+import com.afec.app.domain.TransactionParser
 import com.afec.app.notifications.AlarmScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import org.json.JSONObject
 import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * MVVM Repository (PRD §07): single source of truth over Room.
@@ -211,6 +216,15 @@ class AfecRepository(context: Context) {
             .filter { it.status == InstrumentStatus.ACTIVE || it.status == InstrumentStatus.OVERDUE }
             .forEach { scheduler.scheduleFor(it, pref) }
     }
+
+    /** Spend overview (money out only): computed from stored SMS, no persisted table. */
+    fun observeMonthlySpend(month: YearMonth): kotlinx.coroutines.flow.Flow<MonthlyTotal> =
+        sms.observeAll().map { msgs ->
+            val spends = msgs.mapNotNull { m ->
+                TransactionParser.parse(m.sender, m.rawBody, java.time.Instant.ofEpochMilli(m.receivedAtEpoch))
+            }
+            MonthlySpend.summarize(spends, month)
+        }.flowOn(kotlinx.coroutines.Dispatchers.IO)
 
     /** §11/§12 maintenance: purge raw SMS > 30d and archived items > 30d. */
     suspend fun runPurge() {

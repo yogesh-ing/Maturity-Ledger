@@ -60,6 +60,13 @@ interface SmsMessageDao {
     @Query("SELECT * FROM sms_messages WHERE id = :id")
     suspend fun getById(id: String): SmsMessage?
 
+    /** All stored SMS (used by the spend overview; survives only within the 30-day purge window). */
+    @Query("SELECT * FROM sms_messages")
+    fun observeAll(): kotlinx.coroutines.flow.Flow<List<SmsMessage>>
+
+    @Query("SELECT * FROM sms_messages WHERE receivedAtEpoch >= :cutoff")
+    suspend fun since(cutoff: Long): List<SmsMessage>
+
     /** §11: raw SMS bodies auto-purged after 30 days. */
     @Query("DELETE FROM sms_messages WHERE receivedAtEpoch < :cutoff")
     suspend fun purgeOlderThan(cutoff: Long)
