@@ -1,2 +1,6 @@
 .freebuff/
 .idea/
+build/
+.gradle/
+app/build/
+local.properties
