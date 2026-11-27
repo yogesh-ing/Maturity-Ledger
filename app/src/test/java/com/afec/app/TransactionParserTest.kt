@@ -4,6 +4,7 @@ import com.afec.app.domain.SpendCategory
 import com.afec.app.domain.TransactionParser
 import com.afec.app.domain.TxnKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Instant
@@ -11,71 +12,204 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 class TransactionParserTest {
-    private val zone: ZoneId = ZoneId.systemDefault()
-    private fun instant(d: LocalDate): Instant = d.atStartOfDay(zone).toInstant()
+
+    private val zone = ZoneId.of("Asia/Kolkata")
+
+    // ── Amount extraction ──────────────────────────────
 
     @Test
-    fun `debit with trailing balance takes the debit not the balance`() {
-        val s = TransactionParser.parse("HDFCBK", "Rs.500 debited from A/c XX1234. Avl Bal Rs.10,000", instant(LocalDate.of(2026, 11, 20)))
-        assertEquals(50000L, s!!.amountMinor)
-        assertEquals(TxnKind.SPEND, s.kind)
+    fun `debit with trailing Avl Bal returns the debit not the balance`() {
+        val spend = TransactionParser.parse(
+            "HDFCBANK", TestFixtures.SWIGGY_DEBIT,
+            TestFixtures.instant("2025-11-26"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(34_000L, spend!!.amountMinor)
+        assertEquals(TxnKind.SPEND, spend.kind)
     }
 
     @Test
-    fun `balance only yields nothing`() {
-        val s = TransactionParser.parse("HDFCBK", "Avl Bal Rs.50,000", instant(LocalDate.of(2026, 11, 20)))
-        assertNull(s)
+    fun `balance-only message returns null`() {
+        assertNull(
+            TransactionParser.parse(
+                "HDFCBANK", TestFixtures.BALANCE_ONLY,
+                TestFixtures.instant("2025-11-26"), zone
+            )
+        )
     }
 
     @Test
-    fun `salary credit is not a spend`() {
-        val s = TransactionParser.parse("SBIINB", "Rs.85,000 credited to your account. Salary for Nov", instant(LocalDate.of(2026, 11, 20)))
-        assertNull(s)
+    fun `Indian format lakh grouping parses to 12345678 paise`() {
+        val spend = TransactionParser.parse(
+            "DMART", TestFixtures.INDIAN_FORMAT_AMOUNT,
+            TestFixtures.instant("2025-11-20"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(12_345_678L, spend!!.amountMinor)
     }
 
     @Test
-    fun `credit card bill payment is not a spend`() {
-        val s = TransactionParser.parse("HDFCBK", "Thank you for your payment of Rs.5,000 towards your credit card bill", instant(LocalDate.of(2026, 11, 20)))
-        assertNull(s)
+    fun `voucher applied returns the gross spend not the net`() {
+        val spend = TransactionParser.parse(
+            "SWIGGY", TestFixtures.VOUCHER_APPLIED,
+            TestFixtures.instant("2025-11-26"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(50_000L, spend!!.amountMinor)
+    }
+
+    // ── Direction ──────────────────────────────────────
+
+    @Test
+    fun `UPI debit with VPA is SPEND`() {
+        val spend = TransactionParser.parse(
+            "OKICICI", TestFixtures.UPI_DEBIT_VPA,
+            TestFixtures.instant("2025-11-26"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(TxnKind.SPEND, spend!!.kind)
+        assertEquals(SpendCategory.FOOD, spend.category)
     }
 
     @Test
-    fun `upi debit to swiggy categorises as food`() {
-        val s = TransactionParser.parse("SBIINB", "Rs.450 debited via UPI. VPA swiggy@okaxis", instant(LocalDate.of(2026, 11, 20)))
-        assertEquals(45000L, s!!.amountMinor)
-        assertEquals(SpendCategory.FOOD, s.category)
+    fun `card spend is SPEND`() {
+        val spend = TransactionParser.parse(
+            "HDFCCARD", TestFixtures.CARD_SPEND,
+            TestFixtures.instant("2025-11-26"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(TxnKind.SPEND, spend!!.kind)
     }
 
     @Test
-    fun `card spend is a spend`() {
-        val s = TransactionParser.parse("HDFCBK", "You spent Rs.1,299 on HDFC Credit Card xx1234", instant(LocalDate.of(2026, 11, 20)))
-        assertEquals(TxnKind.SPEND, s!!.kind)
-        assertEquals(129900L, s.amountMinor)
+    fun `refund is REFUND`() {
+        val spend = TransactionParser.parse(
+            "AMAZON", TestFixtures.REFUND,
+            TestFixtures.instant("2025-11-24"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(TxnKind.REFUND, spend!!.kind)
+        assertEquals(49_900L, spend.amountMinor)
     }
 
     @Test
-    fun `refund is a refund`() {
-        val s = TransactionParser.parse("AMAZON", "Rs.499 credited to your account as refund against order 123", instant(LocalDate.of(2026, 11, 20)))
-        assertEquals(TxnKind.REFUND, s!!.kind)
-        assertEquals(49900L, s.amountMinor)
+    fun `ATM withdrawal is SPEND CASH`() {
+        val spend = TransactionParser.parse(
+            "HDFCBANK", TestFixtures.ATM_WITHDRAWAL,
+            TestFixtures.instant("2025-11-25"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(TxnKind.SPEND, spend!!.kind)
+        assertEquals(SpendCategory.CASH, spend.category)
+    }
+
+    // ── Exclusions ─────────────────────────────────────
+
+    @Test
+    fun `salary credit returns null`() {
+        assertNull(
+            TransactionParser.parse(
+                "SALARY", TestFixtures.SALARY_CREDIT,
+                TestFixtures.instant("2025-11-01"), zone
+            )
+        )
     }
 
     @Test
-    fun `otp and intent and declined are not spends`() {
-        assertNull(TransactionParser.parse("HDFCBK", "Your OTP is 123456. Rs.500 will be debited", instant(LocalDate.of(2026, 11, 20))))
-        assertNull(TransactionParser.parse("HDFCBK", "Reminder: your EMI of Rs.5,000 is due on 05/12", instant(LocalDate.of(2026, 11, 20))))
-        assertNull(TransactionParser.parse("HDFCBK", "Transaction of Rs.500 declined", instant(LocalDate.of(2026, 11, 20))))
+    fun `credit card bill payment returns null`() {
+        assertNull(
+            TransactionParser.parse(
+                "HDFCCARD", TestFixtures.CREDIT_CARD_PAYMENT,
+                TestFixtures.instant("2025-11-26"), zone
+            )
+        )
     }
 
     @Test
-    fun `indian grouping parses to minor units exactly`() {
-        val s = TransactionParser.parse("SBIINB", "Rs.1,23,456.78 debited from your account", instant(LocalDate.of(2026, 11, 20)))
-        assertEquals(12345678L, s!!.amountMinor)
+    fun `scheduled mandate returns null`() {
+        assertNull(
+            TransactionParser.parse(
+                "HDFCBANK", TestFixtures.SCHEDULED_DEBIT,
+                TestFixtures.instant("2025-11-26"), zone
+            )
+        )
     }
 
     @Test
-    fun `date comes from the sms timestamp not today`() {
-        val s = TransactionParser.parse("SBIINB", "Rs.100 debited from your account", instant(LocalDate.of(2025, 3, 14)))
-        assertEquals(LocalDate.of(2025, 3, 14), s!!.occurredOn)
+    fun `OTP returns null`() {
+        assertNull(
+            TransactionParser.parse(
+                "OKICICI", TestFixtures.OTP_SMS,
+                TestFixtures.instant("2025-11-26"), zone
+            )
+        )
+    }
+
+    @Test
+    fun `declined transaction returns null`() {
+        assertNull(
+            TransactionParser.parse(
+                "OKICICI", TestFixtures.DECLINED,
+                TestFixtures.instant("2025-11-26"), zone
+            )
+        )
+    }
+
+    @Test
+    fun `settled mandate is SPEND`() {
+        val spend = TransactionParser.parse(
+            "HDFCBANK", TestFixtures.SETTLED_MANDATE,
+            TestFixtures.instant("2025-11-05"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(TxnKind.SPEND, spend!!.kind)
+        assertEquals(500_000L, spend.amountMinor)
+    }
+
+    // ── Date ───────────────────────────────────────────
+
+    @Test
+    fun `date from SMS body is used not receivedAt`() {
+        val spend = TransactionParser.parse(
+            "HDFCBANK", TestFixtures.SWIGGY_DEBIT,
+            TestFixtures.instant("2025-12-01"),
+            zone
+        )
+        assertNotNull(spend)
+        assertEquals(LocalDate.of(2025, 11, 26), spend!!.occurredOn)
+    }
+
+    @Test
+    fun `receivedAt in 2025 gives occurredOn in 2025 not today`() {
+        val body = "You have spent Rs.100.00 at CAFE. 15/06/2025."
+        val spend = TransactionParser.parse(
+            "Cafe", body,
+            TestFixtures.instant("2025-06-15"), zone
+        )
+        assertNotNull(spend)
+        assertEquals(2025, spend!!.occurredOn.year)
+    }
+
+    // ── Safety ─────────────────────────────────────────
+
+    @Test
+    fun `empty body returns null`() {
+        assertNull(TransactionParser.parse("X", "", Instant.now(), zone))
+    }
+
+    @Test
+    fun `no amount token returns null`() {
+        assertNull(
+            TransactionParser.parse(
+                "X", "Thank you for banking with us.",
+                Instant.now(), zone
+            )
+        )
+    }
+
+    @Test
+    fun `non-INR currency returns null`() {
+        val body = "USD 50.00 spent at GLOBAL STORE. 26/11/2025."
+        assertNull(TransactionParser.parse("X", body, Instant.now(), zone))
     }
 }

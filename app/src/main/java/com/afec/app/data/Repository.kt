@@ -8,7 +8,8 @@ import com.afec.app.domain.TransactionParser
 import com.afec.app.notifications.AlarmScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.YearMonth
@@ -49,14 +50,20 @@ class AfecRepository(context: Context) {
 
     /** Entry point for every parsed SMS (live receiver, historical scan, tests). */
     suspend fun ingestSms(sender: String, body: String, receivedAtEpoch: Long): IngestResult {
+        // The SMS timestamp is the transaction date. LocalDate.now() stamped every
+        // backfilled message with today, which emptied last month's overview.
+        val sentOn = java.time.Instant.ofEpochMilli(receivedAtEpoch)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDate()
+
         // Pluggable ParserPattern weights (PRD S07/S14): seeded + correction-tuned per sender.
         val dbPatterns = patterns.getAll()
         val upperSender = sender.uppercase(java.util.Locale.ROOT)
         val matched = dbPatterns.firstOrNull { upperSender.contains(it.bankSenderId.uppercase(java.util.Locale.ROOT)) }
         val outcome = if (matched != null) {
-            SmsParser.parse(sender, body, LocalDate.now(), senderWeight = matched.baseConfidenceWeight)
+            SmsParser.parse(sender, body, sentOn, senderWeight = matched.baseConfidenceWeight)
         } else {
-            SmsParser.parse(sender, body, LocalDate.now())
+            SmsParser.parse(sender, body, sentOn)
         }
         val fields = outcome.fields
         val msg = SmsMessage(
@@ -217,14 +224,26 @@ class AfecRepository(context: Context) {
             .forEach { scheduler.scheduleFor(it, pref) }
     }
 
-    /** Spend overview (money out only): computed from stored SMS, no persisted table. */
-    fun observeMonthlySpend(month: YearMonth): kotlinx.coroutines.flow.Flow<MonthlyTotal> =
-        sms.observeAll().map { msgs ->
-            val spends = msgs.mapNotNull { m ->
-                TransactionParser.parse(m.sender, m.rawBody, java.time.Instant.ofEpochMilli(m.receivedAtEpoch))
+    /**
+     * Spend overview (money out only) for one month, recomputed from stored SMS.
+     * No persisted table: the current month always sits inside the 30-day retention.
+     */
+    suspend fun getSpendForMonth(month: YearMonth): MonthlyTotal = withContext(Dispatchers.IO) {
+        val zone = java.time.ZoneId.systemDefault()
+        val from = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val nextMonth = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val spends = sms.since(from)
+            .filter { it.receivedAtEpoch < nextMonth }
+            .mapNotNull { row ->
+                TransactionParser.parse(
+                    sender = row.sender,
+                    body = row.rawBody,
+                    receivedAt = java.time.Instant.ofEpochMilli(row.receivedAtEpoch),
+                    zone = zone
+                )
             }
-            MonthlySpend.summarize(spends, month)
-        }.flowOn(kotlinx.coroutines.Dispatchers.IO)
+        MonthlySpend.summarize(spends, month)
+    }
 
     /** §11/§12 maintenance: purge raw SMS > 30d and archived items > 30d. */
     suspend fun runPurge() {

@@ -9,6 +9,7 @@ import com.afec.app.data.SmsMessage
 import com.afec.app.data.TrackedInstrument
 import com.afec.app.sms.HistoricalSmsScanner
 import com.afec.app.ui.theme.ThemeMode
+import java.time.YearMonth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +50,25 @@ class AfecViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _selectedSms = MutableStateFlow<SmsMessage?>(null)
     val selectedSms: StateFlow<SmsMessage?> = _selectedSms.asStateFlow()
+
+    /** Screen 04 — read-only spend overview. Recomputed on every load, never cached. */
+    private val _expenses = MutableStateFlow<ExpenseState>(ExpenseState.Loading)
+    val expenses: StateFlow<ExpenseState> = _expenses.asStateFlow()
+
+    fun loadExpenses() = viewModelScope.launch {
+        val month = YearMonth.now()
+        _expenses.value = runCatching { repo.getSpendForMonth(month) }
+            .fold(
+                onSuccess = { total ->
+                    if (total.transactionCount == 0 && total.refundCount == 0) {
+                        ExpenseState.Empty(month)
+                    } else {
+                        ExpenseState.Ready(total, month)
+                    }
+                },
+                onFailure = { ExpenseState.Empty(month) }
+            )
+    }
 
     fun finishOnboarding() {
         uiPrefs.edit().putBoolean("onboarding_done", true).apply()

@@ -1,7 +1,10 @@
 package com.afec.app.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -45,7 +49,7 @@ import com.afec.app.export.CsvExporter
 import com.afec.app.export.PdfExporter
 import com.afec.app.ui.theme.AfecTheme
 
-private enum class Tab { DASHBOARD, QUEUE, SETTINGS }
+private enum class Tab { DASHBOARD, EXPENSES, QUEUE, SETTINGS }
 private sealed interface SheetState {
     data object New : SheetState
     data class Edit(val item: TrackedInstrument) : SheetState
@@ -77,6 +81,7 @@ fun AfecApp(
     val queue by viewModel.queue.collectAsState()
     val preferences by viewModel.preferences.collectAsState()
     val message by viewModel.message.collectAsState()
+    val expenses by viewModel.expenses.collectAsState()
 
     var tab by remember { mutableStateOf(if (openQueueInitially) Tab.QUEUE else Tab.DASHBOARD) }
     var selectedId by remember { mutableStateOf(initialInstrumentId) }
@@ -117,6 +122,8 @@ fun AfecApp(
                 val granted = smsPermissionGranted()
                 if (granted && !hasSmsPermission) viewModel.rescanSms()
                 hasSmsPermission = granted
+                // New debit SMS arrive while we are paused; refresh the overview.
+                viewModel.loadExpenses()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -126,6 +133,9 @@ fun AfecApp(
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(message) {
         message?.let { snackbar.showSnackbar(it); viewModel.clearMessage() }
+    }
+    LaunchedEffect(tab) {
+        if (tab == Tab.EXPENSES) viewModel.loadExpenses()
     }
     LaunchedEffect(initialInstrumentId) {
         if (!firstLinkHandled && initialInstrumentId != null) {
@@ -161,6 +171,12 @@ fun AfecApp(
                                 onClick = { tab = Tab.DASHBOARD },
                                 icon = { Icon(Icons.Default.Home, contentDescription = null) },
                                 label = { Text("Dashboard") }
+                            )
+                            NavigationBarItem(
+                                selected = tab == Tab.EXPENSES,
+                                onClick = { tab = Tab.EXPENSES },
+                                icon = { Icon(Icons.Default.Receipt, contentDescription = null) },
+                                label = { Text("Expenses") }
                             )
                             NavigationBarItem(
                                 selected = tab == Tab.QUEUE,
@@ -218,6 +234,16 @@ fun AfecApp(
                             onItemClick = { selectedId = it.id },
                             onRestore = { viewModel.restore(it) },
                             onDeleteForever = { viewModel.deleteForever(it) }
+                        )
+                        tab == Tab.EXPENSES -> ExpenseScreen(
+                            state = expenses,
+                            onEnableSms = {
+                                val intent = Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.fromParts("package", context.packageName, null)
+                                )
+                                context.startActivity(intent)
+                            }
                         )
                         tab == Tab.QUEUE -> QueueScreen(
                             queue = queue,
